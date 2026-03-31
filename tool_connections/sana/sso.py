@@ -26,7 +26,7 @@ import urllib.request
 
 TOOL_NAME = "sana"
 ENV_KEYS = ["SANA_SESSION_COOKIE", "SANA_WORKSPACE_ID"]
-SANA_INVITE_URL = "https://sana.ai/tPNxyS5GyK1r"
+SANA_INVITE_URL = "https://sana.ai/<YOUR_WORKSPACE_ID>"  # replace with your org's Sana invite URL
 SANA_BASE_URL = "https://sana.ai"
 
 

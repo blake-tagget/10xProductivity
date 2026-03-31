@@ -1,43 +1,39 @@
 ---
 name: enterprise-search
-description: >
-  Search your entire company's institutional knowledge in one query — Slack,
-  Confluence, Jira, Linear, Notion, GitHub, plus any AI or multi-source search
-  tool listed in verified_connections.md. Follow workflows/enterprise-search.
-  One question, every connected tool, synthesized answer in seconds. No tab
-  switching. No copy-paste. Use when the user asks about a decision, an incident,
-  a topic, a person, a past discussion, or anything that might be documented
-  across work tools. Also triggers on: "find", "search for", "who worked on",
-  "what was the decision about", "is there a doc on", "any Slack about".
-source: https://github.com/zhixiangluo/10xProductivity
+description: enterprise-search skill
+source: https://github.com/blake-tagget/10xProductivity
 ---
 
 # Enterprise Search
 
-> One question. Every connected tool. One synthesized answer.
+Search institutional knowledge across every connected tool simultaneously.
 
-Search your company's knowledge across Slack, Confluence, Jira, Linear, Notion,
-GitHub, and more — simultaneously, in a single query.
+One query → Slack + Confluence (always when connected) + any AI-synthesized search tools in `verified_connections.md` + Jira/Linear/Notion/GitHub when relevant → synthesized answer.
 
----
+## Steps
 
-## Before you search: check connection status
+1. Check connection status:
+   ```bash
+   ls verified_connections.md 2>/dev/null && grep -c "^##" verified_connections.md || echo "0"
+   ```
 
-```bash
-ls verified_connections.md 2>/dev/null && grep -c "^##" verified_connections.md || echo "0"
-```
+2. **If 1+ tools connected:** Read `verified_connections.md` (your active tool index), then follow
+   `workflows/enterprise-search/enterprise-search.md` to search for: $ARGUMENTS
 
-- **1+ tools connected** → read `verified_connections.md` (capability index), then follow `workflows/enterprise-search/enterprise-search.md` for the search. That workflow always uses Slack + Confluence when connected, may include AI-synthesized search tools listed only in `verified_connections.md` (per each connection file), and adds Jira/Linear/Notion/GitHub when relevant.
-- **Not connected / empty** → read `setup.md`. Your agent handles the full connection flow — credentials, SSO, verification — in one session. ~5 minutes per tool.
+3. **If not connected / empty:** Read `setup.md`. It walks through connecting each tool you use —
+   credentials, SSO, verification — your agent runs the whole flow. ~5 min per tool.
+   Once set up, run this command again.
 
----
+## What this searches
 
-## What you can ask
+| Tool | What it finds |
+|------|--------------|
+| Slack | Decisions, incident threads, "why did we do X" |
+| Confluence | Runbooks, architecture docs, procedures |
+| Jira | Tickets, bugs, epics, sprint history |
+| Linear | Project issues and feature requests |
+| Notion | Pages and databases |
+| GitHub | Code, PRs, issues (code-related queries only) |
+| *Other* | If `verified_connections.md` lists an AI assistant or multi-source knowledge search, follow that connection file in parallel — see the workflow. |
 
-- *"Search for the discussion about the database migration"*
-- *"Find any Jira tickets related to the login timeout bug"*
-- *"What was the decision about the API versioning approach?"*
-- *"Is there a Confluence runbook for on-call handoffs?"*
-- *"Who worked on the payments refactor and what did they decide?"*
-
-The search workflow handles routing, parallel execution across tools, and synthesized results. You don't need to specify which tool — the agent figures that out.
+Only connected tools are searched. The workflow adapts to whatever is in `verified_connections.md`.

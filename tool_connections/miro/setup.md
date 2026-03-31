@@ -1,6 +1,6 @@
 ---
 name: miro-setup
-description: Set up Miro connection. Auth is Okta SAML session token cookie. No input needed — run the SSO script and Okta auto-completes on managed Workday machine.
+description: Set up Miro connection. Auth is Okta SAML session token cookie. No input needed — run the SSO script and Okta auto-completes on managed machines.
 ---
 
 # Miro — Setup
@@ -36,7 +36,7 @@ req = urllib.request.Request("https://miro.com/api/v1/users/me/",
     headers={"Cookie": f"token={env['MIRO_TOKEN']}", "Accept": "application/json"})
 r = json.loads(urllib.request.urlopen(req, context=ctx, timeout=10).read())
 print(r.get("name"), r.get("email"))
-# → Blake Tagget  user@example.com
+# → Your Name  your@email.com
 # If 401: token expired — run sso.py --force
 ```
 

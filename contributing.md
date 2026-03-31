@@ -78,8 +78,12 @@ Go through every file in `personal/{tool-name}/` and remove anything org- or per
 | Real API tokens or session cookies | `your-token-here` |
 | Your org's domain, workspace URL, tenant ID | `{your-workspace}.tool.com` |
 | Your name, email, user ID | `Alice`, `alice@example.com`, `u_123` |
-| Internal resource names (channels, projects) | `my-project`, `#general` |
+| Other people's names or emails | `Alice`, `alice@example.com` |
+| Internal resource names (channels, projects, meeting titles) | `my-project`, `#general`, `Meeting title` |
 | Org-specific base URLs | `$TOOL_BASE_URL` env var |
+| Resource IDs used as examples (board IDs, chat IDs, doc IDs, account IDs) | `<RESOURCE_ID>`, `<account-id>` |
+| Hardcoded IDs in `.py` constants (e.g. `INVITE_URL = "https://tool.ai/abc123"`) | Placeholder string or read from `env["VAR_NAME"]` |
+| Org-specific subdomains in Notes (e.g. `yourorg.okta.com`, `yourorg.tool.ai`) | `<your-org>.okta.com` |
 
 **Keep:**
 - Real HTTP status codes and response field names (these are general)
