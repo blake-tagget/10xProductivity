@@ -97,12 +97,12 @@ for rec in r.get("result", {}).get("recordings", []):
 r = zoom_get(f"{ZOOM}/rest/meeting/host_summary_list")
 for s in r.get("result", {}).get("data", []):
     print(s["topic"], s["createTime"], s["docId"])
-# → Alice / Bob  Mar 24, 2026 02:41 PM  U7JbOdPTTbqAdoqqJez62g
-# → Alice intros Bob to dbt semantic models  Mar 24, 2026 02:03 PM  j4B6D1iWQMWWl_tvcGBt5g
+# → Meeting title 1  Mar 24, 2026 02:41 PM  <docId>
+# → Meeting title 2  Mar 24, 2026 02:03 PM  <docId>
 
 # Get full AI meeting summary text (uses Playwright storage state — ~5s per doc)
 from personal.zoom.sso import get_summary_text
-text = get_summary_text("U7JbOdPTTbqAdoqqJez62g")
+text = get_summary_text("<docId>")
 # Returns full doc text including Quick recap, Next steps, Summary sections
 
 # User info via docs API
@@ -129,7 +129,7 @@ python3 personal/zoom/sso.py --refresh-nak
 
 # Full SSO refresh (when _zm_ssid expires — days/weeks):
 python3 personal/zoom/sso.py --force
-# Okta SSO auto-completes on managed Workday machine
+# Okta SSO auto-completes on managed machines
 ```
 
 ---

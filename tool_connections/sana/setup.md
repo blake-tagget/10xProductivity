@@ -1,6 +1,6 @@
 ---
 name: sana-setup
-description: Set up Sana Agents connection. Auth is Okta SAML session cookie + workspace ID header. No input needed — just run the SSO script and Okta auto-completes on managed Workday machine.
+description: Set up Sana Agents connection. Auth is Okta SAML session cookie + workspace ID header. No input needed — just run the SSO script and Okta auto-completes on managed machines.
 ---
 
 # Sana Agents — Setup
@@ -9,7 +9,7 @@ description: Set up Sana Agents connection. Auth is Okta SAML session cookie + w
 
 Sana uses an Express session cookie (`sana-ai-session`) upgraded after Okta SAML auth, plus a static `sana-ai-workspace-id` header on every request.
 
-**What to ask the user:** Nothing. Run the SSO script — Okta auto-completes on Workday managed machines.
+**What to ask the user:** Nothing. Run the SSO script — Okta auto-completes on managed machines.
 
 ---
 
@@ -39,7 +39,6 @@ req = urllib.request.Request("https://sana.ai/x-api/trpc/assistantV2.list",
 r = json.loads(urllib.request.urlopen(req, context=ctx, timeout=10).read())
 for a in r["result"]["data"]:
     print(a["name"])
-# → Ask P&T Operations Agent
 # → (list of available assistants)
 # If 401: session expired — run sso.py --force
 ```
@@ -52,5 +51,5 @@ for a in r["result"]["data"]:
 # --- Sana Agents ---
 # Refresh with: source .venv/bin/activate && python3 personal/sana/sso.py --force
 SANA_SESSION_COOKIE=s%3A...
-SANA_WORKSPACE_ID=tPNxyS5GyK1r
+SANA_WORKSPACE_ID=your-workspace-id
 ```

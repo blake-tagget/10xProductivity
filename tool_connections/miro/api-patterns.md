@@ -162,11 +162,11 @@ for frame_name, items in frame_contents.items():
 
 ## Board IDs
 
-Miro board IDs in URLs are base64 strings (e.g. `uXjVG2SvynI=`). URL-encode the `=` when using in API paths:
+Miro board IDs in URLs are base64 strings (e.g. `aBcDeFgHiJk=`). URL-encode the `=` when using in API paths:
 
 ```python
 board_id = urllib.parse.quote(env["MIRO_BOARD_ID"], safe="")
-# "uXjVG2SvynI=" → "uXjVG2SvynI%3D"
+# "aBcDeFgHiJk=" → "aBcDeFgHiJk%3D"
 ```
 
 ---
