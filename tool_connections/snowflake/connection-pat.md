@@ -13,7 +13,7 @@ env_vars:
 
 Connect to Snowflake for SQL queries, data exploration, and schema introspection. Uses a long-lived PAT stored by the Snowflake VSCode extension — no OAuth app or browser automation needed.
 
-**Verified:** `ktazvpl-evb32354.privatelink` (us-west-2 private link) — CURRENT_USER query — 2026-03.
+**Verified:** `<account-id>.privatelink` (us-west-2 private link) — CURRENT_USER query — 2026-03.
 
 ---
 
@@ -25,8 +25,8 @@ Connect to Snowflake for SQL queries, data exploration, and schema introspection
 python3 personal/snowflake/connection.py --sync
 
 # .env keys written:
-# SNOWFLAKE_ACCOUNT=ktazvpl-evb32354.privatelink
-# SNOWFLAKE_USER=blake.tagget@workday.com
+# SNOWFLAKE_ACCOUNT=<account-id>.privatelink
+# SNOWFLAKE_USER=your@email.com
 # SNOWFLAKE_PAT=<jwt>
 # SNOWFLAKE_WAREHOUSE=data_analysis_wh
 ```
@@ -64,7 +64,7 @@ conn = snowflake.connector.connect(
 cur = conn.cursor()
 cur.execute("SELECT CURRENT_USER(), CURRENT_ROLE(), CURRENT_WAREHOUSE()")
 print(cur.fetchone())
-# → ('BLAKE.TAGGET@WORKDAY.COM', 'ROLE_DATA_ANALYST', 'DATA_ANALYSIS_WH')
+# → ('YOUR@EMAIL.COM', 'YOUR_ROLE', 'YOUR_WAREHOUSE')
 
 # List databases you have access to
 cur.execute("SHOW DATABASES")
@@ -97,7 +97,7 @@ If not present, log in to the Snowflake web UI and generate a PAT under Profile 
 
 PAT expires ~1 year from creation. When expired (auth errors on connect):
 
-1. Log in to `https://app.us-west-2.privatelink.snowflakecomputing.com/ktazvpl/evb32354`
+1. Log in to your Snowflake web UI (find your account URL in `~/.snowflake/config.toml`)
 2. Profile → Programmatic Access Tokens → Generate new token
 3. Update `password` in `~/.snowflake/config.toml`
 4. Run `python3 personal/snowflake/connection.py --sync` to update `.env`
@@ -107,6 +107,6 @@ PAT expires ~1 year from creation. When expired (auth errors on connect):
 ## Notes
 
 - `insecure_mode=True` is required for privatelink endpoints (internal DNS, custom cert)
-- Account identifier: `ktazvpl-evb32354.privatelink` (not the full URL)
+- Account identifier: `<account-id>.privatelink` (not the full URL)
 - Default warehouse: `data_analysis_wh`, role: `ROLE_DATA_ANALYST`
 - The `password` field in config.toml holds a PAT (Programmatic Access Token) JWT — entered as the password credential, using `authenticator = "snowflake"` (standard password auth mode)

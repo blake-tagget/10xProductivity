@@ -99,7 +99,7 @@ for w in r["content"]["widgets"]:
 ```bash
 source .venv/bin/activate
 python3 personal/miro/sso.py --force
-# Okta SSO auto-completes on managed Workday machine
+# Okta SSO auto-completes on managed machines
 ```
 
 ---

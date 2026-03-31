@@ -130,9 +130,9 @@ def get_meeting_fragments(asset_id, queries):
 Each search returns a different window (~200 chars) around the matched text. To get the next sentence after a snippet ends, search for the trailing phrase:
 
 ```
-Snippet ends: "...maybe we're thinking different things. Blake: Oh Josh..."
-Next query:   "maybe we're thinking different things blake josh"
-→ New window: "...Oh Josh Dixon: So I guess we're just going to have to wait and see..."
+Snippet ends: "...maybe we're thinking different things. Alice: Oh Bob..."
+Next query:   "maybe we're thinking different things alice bob"
+→ New window: "...Oh Bob: So I guess we're just going to have to wait and see..."
 ```
 
 6–10 varied queries will typically surface most of a relevant passage.

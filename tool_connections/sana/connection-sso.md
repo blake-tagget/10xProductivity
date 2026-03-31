@@ -20,7 +20,7 @@ AI assistant and knowledge platform at sana.ai. tRPC API — all endpoints at `h
 ```bash
 # .env entries:
 # SANA_SESSION_COOKIE=s%3A...   (from sso.py — refreshed after Okta session expires)
-# SANA_WORKSPACE_ID=tPNxyS5GyK1r  (static — workspace ID from invite URL)
+# SANA_WORKSPACE_ID=your-workspace-id  (static — workspace ID from invite URL)
 # Refresh: source .venv/bin/activate && python3 personal/sana/sso.py --force
 ```
 
@@ -64,14 +64,13 @@ def trpc_get(procedure):
 # Current user
 r = trpc_get("user.me")
 print(r["result"]["data"]["user"]["email"])
-# → blake.tagget@workday.com
+# → your@email.com
 
 # List assistants
 r = trpc_get("assistantV2.list")
 for a in r["result"]["data"]:
     print(a["name"])
-# → Ask P&T Operations Agent
-# → ...
+# → (list of available assistants)
 
 # List recent assets
 # → 400 (requires input param — not yet determined)
@@ -85,7 +84,7 @@ Chat endpoint pattern observed: `POST /x-api/agent-v2/chat/{chatId}/messages`
 
 ```python
 import json as _json
-chat_id = "5oiRUZBhFBF7"   # from assistantV2.list or create new chat
+chat_id = "<CHAT_ID>"   # from assistantV2.list or create new chat
 post_headers = {**HEADERS, "Content-Type": "application/json"}
 body = _json.dumps({"message": "hello"}).encode()
 req = urllib.request.Request(
@@ -113,6 +112,6 @@ python3 personal/sana/sso.py --force
 ## Notes
 
 - `sana-ai-workspace-id` header is required for all workspace-scoped endpoints — omitting it returns 401 with no error message
-- SAML flow goes through `workday.okta.com` — auto-completes on managed Workday machine
+- SAML flow goes through your org's Okta tenant — auto-completes on managed machines
 - Session TTL unknown — re-run `sso.py --force` if 401s appear
-- `workday.sana.ai` is a separate product (Sana Learn/LMS) — do not confuse with this workspace
+- `<your-org>.sana.ai` may be a separate Sana Learn/LMS product — do not confuse with the Agents workspace

@@ -24,7 +24,7 @@ Notes:
     - Google Docs use canvas rendering — DOM text extraction not possible;
       read() calls the export URL which Playwright intercepts as a download
 
-Verified: 2026-03-14, jeffrey.luo@workday.com
+Verified: 2026-03-14
 """
 
 import re, sys, time
