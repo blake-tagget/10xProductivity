@@ -1,168 +1,162 @@
 """
-Sana SSO capture — plugin for playwright_sso.py discovery.
+Sana (sana.ai) session capture — plugin for tool_connections/shared_utils/playwright_sso.py.
 
-Navigates to sana.ai via invite URL, completes SSO, and captures
-the sana-ai-session cookie.
+Opens your Sana workspace URL in a headed browser, completes SSO if prompted, and
+extracts the `sana-ai-session` cookie.
 
-Standalone usage:
-    python3 personal/sana/sso.py
-    python3 personal/sana/sso.py --force
+.env before capture:
+  SANA_WORKSPACE_URL=https://sana.ai/your-workspace-id   (or /profile URL)
+
+Standalone:
+    python3 tool_connections/sana/sso.py
+    python3 tool_connections/sana/sso.py --force
 """
 
+from __future__ import annotations
+
+import re
+import ssl
 import sys
 import time
-import re
+import urllib.request
+from pathlib import Path
+from urllib.parse import urlparse
 
 try:
-    from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
+    from playwright.sync_api import sync_playwright
 except ImportError:
     import os
+
     os.system(f"{sys.executable} -m pip install playwright -q")
     os.system(f"{sys.executable} -m playwright install chromium -q")
-    from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
-
-import ssl
-import urllib.request
+    from playwright.sync_api import sync_playwright
 
 TOOL_NAME = "sana"
-ENV_KEYS = ["SANA_SESSION_COOKIE", "SANA_WORKSPACE_ID"]
-SANA_INVITE_URL = "https://sana.ai/<YOUR_WORKSPACE_ID>"  # replace with your org's Sana invite URL
-SANA_BASE_URL = "https://sana.ai"
+ENV_KEYS = ["SANA_SESSION", "SANA_WORKSPACE_URL", "SANA_WORKSPACE_ID"]
+
+
+def _workspace_id_from_url(url: str) -> str:
+    if not url or "://" not in url:
+        return ""
+    path = urlparse(url.strip()).path.strip("/").split("/")
+    # https://sana.ai/{workspaceId}/...  → first segment
+    return path[0] if path and path[0] not in ("", "signin", "login") else ""
 
 
 def check(env: dict) -> bool:
-    """Return True if SANA_SESSION_COOKIE is valid (workspace-scoped check)."""
-    cookie = env.get("SANA_SESSION_COOKIE", "")
-    workspace_id = env.get("SANA_WORKSPACE_ID", "")
-    if not cookie or not workspace_id or cookie.startswith("your-"):
+    """True if SANA_SESSION is valid (user.me returns 200)."""
+    session = env.get("SANA_SESSION", "").strip()
+    if not session or session == "your-sana-session-cookie":
         return False
     try:
         ctx = ssl.create_default_context()
         ctx.check_hostname = False
         ctx.verify_mode = ssl.CERT_NONE
         req = urllib.request.Request(
-            f"{SANA_BASE_URL}/x-api/trpc/assistantV2.list",
-            headers={
-                "Cookie": f"sana-ai-session={cookie}",
-                "Accept": "application/json",
-                "sana-ai-workspace-id": workspace_id,
-            },
+            "https://sana.ai/x-api/trpc/user.me",
+            headers={"Cookie": f"sana-ai-session={session}"},
         )
-        with urllib.request.urlopen(req, context=ctx, timeout=8) as r:
+        with urllib.request.urlopen(req, context=ctx, timeout=12) as r:
             return r.status == 200
     except Exception:
         return False
 
 
 def capture(env: dict) -> dict:
-    """
-    Open Sana in headed browser, complete Okta SSO, and capture
-    the sana-ai-session cookie AFTER the SAML callback completes.
+    base = env.get("SANA_WORKSPACE_URL", "").strip().rstrip("/")
+    if not base or "your-workspace" in base.lower() or "example" in base.lower():
+        raise RuntimeError(
+            "Set SANA_WORKSPACE_URL in .env to your workspace entry URL, e.g. "
+            "https://sana.ai/your-workspace-id (open Sana in the browser and copy "
+            "the URL after login). Then retry."
+        )
 
-    The cookie exists before SAML (pre-auth), so we must wait until
-    POST /x-api/auth/saml finishes — that's when the session is
-    upgraded to a fully authenticated workspace session.
+    wid = env.get("SANA_WORKSPACE_ID", "").strip() or _workspace_id_from_url(base)
+    if not wid:
+        raise RuntimeError(
+            "Could not derive workspace id from SANA_WORKSPACE_URL. "
+            "Set SANA_WORKSPACE_ID explicitly to the workspace slug from the URL."
+        )
 
-    Token lifetime: varies with IdP session (typically hours–days).
-    """
-    saml_done = {"done": False}
+    # Normalize entry URL (avoid /agent/... as sole entry — parent workspace path is enough)
+    entry = base
+    if "/agent/" in entry:
+        entry = re.sub(r"/agent/.*$", "", entry).rstrip("/") or base
 
-    def _on_response(resp):
-        if "/x-api/auth/saml" in resp.url and resp.request.method == "POST":
-            saml_done["done"] = True
-            print("    SAML callback completed — capturing cookie...", flush=True)
-
-    print(f"  Opening Sana ({SANA_INVITE_URL}) — Okta SSO should auto-complete on managed machine...")
+    print(f"  Opening Sana ({entry}) — complete SSO if prompted (up to 3 min)...", flush=True)
+    session = None
     with sync_playwright() as p:
         browser = p.chromium.launch(
             headless=False,
-            args=["--window-size=1200,800", "--window-position=100,100"],
+            args=["--window-size=1100,800", "--window-position=120,120"],
         )
-        ctx = browser.new_context(ignore_https_errors=True)
-        page = ctx.new_page()
-        page.on("response", _on_response)
-        page.goto(SANA_INVITE_URL, wait_until="commit", timeout=30_000)
-        print("    Waiting for Okta SAML login to complete (up to 3 min)...", flush=True)
-
-        deadline = time.time() + 180
-        while time.time() < deadline:
-            time.sleep(1)
-            if saml_done["done"]:
-                # Give the app a moment to set the upgraded cookie
-                time.sleep(3)
-                break
-
-        cookies = ctx.cookies(["https://sana.ai"])
-        session_cookie = {c["name"]: c["value"] for c in cookies}.get("sana-ai-session")
-
-        # Extract workspace ID from user.me (present in lastUsedWorkspaceId)
-        workspace_id = None
         try:
-            import json as _json
-            ctx2 = ssl.create_default_context()
-            ctx2.check_hostname = False
-            ctx2.verify_mode = ssl.CERT_NONE
-            req = urllib.request.Request(
-                f"{SANA_BASE_URL}/x-api/trpc/user.me",
-                headers={"Cookie": f"sana-ai-session={session_cookie}", "Accept": "application/json"},
-            )
-            with urllib.request.urlopen(req, context=ctx2, timeout=8) as r:
-                data = _json.loads(r.read())
-                workspace_id = data.get("result", {}).get("data", {}).get("user", {}).get("lastUsedWorkspaceId")
-        except Exception:
-            pass
+            ctx = browser.new_context(ignore_https_errors=True)
+            page = ctx.new_page()
+            page.goto(entry, wait_until="domcontentloaded", timeout=90_000)
 
-        browser.close()
+            deadline = time.time() + 180
+            while time.time() < deadline:
+                time.sleep(2)
+                cookies = {c["name"]: c["value"] for c in ctx.cookies(["https://sana.ai"])}
+                session = cookies.get("sana-ai-session")
+                if session:
+                    break
+        finally:
+            browser.close()
 
-    if not session_cookie:
+    if not session:
         raise RuntimeError(
-            "sana-ai-session cookie not found — SAML login may not have completed."
+            "No sana-ai-session cookie after timeout — finish signing in and run again."
         )
 
-    print(f"    sana-ai-session captured ({len(session_cookie)} chars)")
-    result = {"SANA_SESSION_COOKIE": session_cookie}
-    if workspace_id:
-        print(f"    workspace ID: {workspace_id}")
-        result["SANA_WORKSPACE_ID"] = workspace_id
-    else:
-        # Fallback: extract from invite URL
-        result["SANA_WORKSPACE_ID"] = SANA_INVITE_URL.rstrip("/").split("/")[-1]
-    return result
+    print(f"    Sana session captured ({len(session)} chars)")
+    return {
+        "SANA_SESSION": session,
+        "SANA_WORKSPACE_ID": wid,
+        "SANA_WORKSPACE_URL": entry,
+    }
 
 
 if __name__ == "__main__":
     import argparse
-    from pathlib import Path
 
     ENV_FILE = Path(__file__).parents[2] / ".env"
 
     def _load_env():
         if not ENV_FILE.exists():
             return {}
-        return {k.strip(): v.strip() for line in ENV_FILE.read_text().splitlines()
-                if "=" in line and not line.startswith("#") for k, v in [line.split("=", 1)]}
+        return {
+            k.strip(): v.strip()
+            for line in ENV_FILE.read_text().splitlines()
+            if "=" in line and not line.startswith("#")
+            for k, v in [line.split("=", 1)]
+        }
 
-    def _write_env(tokens):
+    def _write_env(tokens: dict[str, str]) -> None:
+        import re as _re
+
         content = ENV_FILE.read_text() if ENV_FILE.exists() else ""
         for key, value in tokens.items():
             new_line = f"{key}={value}"
-            if re.search(rf"^{re.escape(key)}=", content, flags=re.MULTILINE):
-                content = re.sub(rf"^{re.escape(key)}=.*$", new_line, content, flags=re.MULTILINE)
-            elif "# --- Sana" in content:
-                content = content.replace("# --- Sana\n", f"# --- Sana\n{new_line}\n", 1)
+            if _re.search(rf"^{_re.escape(key)}=", content, flags=_re.MULTILINE):
+                content = _re.sub(
+                    rf"^{_re.escape(key)}=.*$", new_line, content, flags=_re.MULTILINE
+                )
             else:
-                content += f"\n# --- Sana ---\n{new_line}\n"
+                content += f"\n{new_line}\n"
         ENV_FILE.write_text(content)
+        print(f"  Updated {ENV_FILE}")
 
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--force", action="store_true")
     args = parser.parse_args()
 
     env = _load_env()
     if not args.force and check(env):
-        print("SANA_SESSION_COOKIE: ok — nothing to do. Use --force to refresh.")
+        print("SANA_SESSION ok — nothing to do. Use --force to refresh.")
         sys.exit(0)
 
     tokens = capture(env)
     _write_env(tokens)
-    print(f"  Written to {ENV_FILE}")
+    print("Done.")

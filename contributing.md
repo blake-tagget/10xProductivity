@@ -11,6 +11,8 @@ description: Contribute a verified personal tool connection back to the communit
 >
 > **Wrong file?** If you haven't built or patched the connection yet, start with `add-new-tool.md` (new tool) or `setup.md` (broken recipe — patch in `personal/` first).
 
+> **The golden rule: `personal/` first, always.** All work — new tools, improvements, fixes, new auth variants — starts and stays in `personal/` until it is verified, scrubbed, and promoted here. Never edit `tool_connections/` directly. `personal/` is gitignored and safe for your email, org URLs, tokens, and company-specific details. Anything committed to `tool_connections/` is public.
+
 ---
 
 ## Step 1: Find what you have that the community doesn't
@@ -114,6 +116,17 @@ ls staging/{tool-name}/
 
 ## Step 5: Open the PR
 
+A pre-push hook is available in `hooks/pre-push`. It's optional for contributors but useful to catch issues before the owner review.
+
+What it does:
+- **Fast scan (always runs if installed):** blocks real credentials, `.env`, personal/company data
+- **AI review (runs if an agent CLI is available):** deeper safety check on the diff. When skipped, it says so explicitly — a skip is never reported as a pass.
+
+To install (optional):
+```bash
+cp hooks/pre-push .git/hooks/pre-push && chmod +x .git/hooks/pre-push
+```
+
 ### New tool or new auth variant
 
 ```bash
@@ -128,7 +141,7 @@ git add staging/{tool-name}/
 # 3. Commit
 git commit -m "Add {Tool Name} connection ({auth-method})"
 
-# 4. Push and open PR
+# 4. Push (hook runs automatically if installed)
 git push -u origin HEAD
 gh pr create \
   --title "Add {Tool Name} connection ({auth-method})" \
@@ -174,7 +187,7 @@ git add staging/{tool-name}/
 # 3. Commit
 git commit -m "Fix {Tool Name} connection ({what broke})"
 
-# 4. Push and open PR
+# 4. Push (hook runs automatically if installed)
 git push -u origin HEAD
 gh pr create \
   --title "Fix {Tool Name} connection ({what broke})" \

@@ -22,6 +22,7 @@ Turn "I want my agent to access Tool X" into a working, verified connection file
 
 ## Non-negotiable rules
 
+0. **`personal/` first, always.** All work — new tools, improvements to existing connections, new auth variants, fixes — starts in `personal/`. Never edit `tool_connections/` directly. `personal/` is gitignored and safe for your email, org URLs, tokens, and company-specific details. Nothing leaves `personal/` until it is verified, scrubbed, and promoted via `staging/` → PR. This applies to improvements just as much as new tools.
 1. **Research viability first.** Before asking the user for anything, determine what auth methods exist for this tool. If no viable method exists (no public API, no session-based workaround, no OAuth path), stop — there is nothing to build.
 2. **Ask only what the auth method actually needs.** The credential ask must be proportional to the auth method: SSO/browser-session → ask for nothing (just a URL to confirm the instance); API token → ask for the token and where to generate it; username+password → ask for both. Never ask vague questions the user can't answer.
 3. **A URL is your best minimal input.** If you need to confirm an instance, ask for any URL from that tool (profile page, dashboard, ticket). It reveals the base URL, regional variant, and proves the user has access — without requiring them to know anything about auth.
@@ -62,8 +63,8 @@ Before asking the user for anything:
 **Stop and explain** if the only viable path requires the user to create an app or register OAuth credentials. Don't propose it as an option — it violates this repo's zero-friction goal.
 
 **SSO-only tools:** If the tool uses enterprise SSO and has no API token path, the only option is browser session capture (Priority 2). This is fine — but do three things:
-1. Write a plugin-compliant `sso.py` in `tool_connections/{tool-name}/` with `TOOL_NAME`, `check(env) -> bool`, and `capture(env) -> dict`. The orchestrator (`shared_utils/playwright_sso.py`) discovers it automatically — no edits to shared files needed. The `--{tool}-only` CLI flag is generated from `TOOL_NAME`.
-2. Document the refresh command in the connection file: `python3 tool_connections/shared_utils/playwright_sso.py --{tool}-only` — the agent cannot self-refresh without the user present.
+1. Write a plugin-compliant `sso.py` in **`personal/{tool-name}/`** (not `tool_connections/`) with `TOOL_NAME`, `check(env) -> bool`, and `capture(env) -> dict`. Run it directly: `python3 personal/{tool-name}/sso.py`. If you later contribute the recipe upstream (owner-add or contribute workflow), `sso.py` is copied to `tool_connections/` as part of that process — not before.
+2. Document the refresh command in the connection file: `python3 personal/{tool-name}/sso.py` — the agent cannot self-refresh without the user present.
 3. Document the token TTL (usually ~8h) — so the user knows when to expect re-authentication prompts.
 
 **When to stop trying:** If browser session auth succeeds (you can log in and see data in the browser) but REST API calls return 401 anyway, the instance has API-level access restrictions that session cookies can't bypass. This is an admin policy, not a fixable bug. Document it as "API access restricted — this tool cannot be automated at this instance" and move on. Do not keep probing different endpoints.
@@ -137,7 +138,9 @@ curl -sI --max-time 10 "$TOOL_BASE_URL/health"    # or /version, /ping, /api/v1/
 #### 4b. Auth
 
 ```bash
-source .env
+# ⚠ Avoid bare `source .env` if .env has non-env-var lines (e.g. long SSO cookie values) — it errors silently.
+# Use tool-scoped export instead:
+export $(grep -v '^#' .env | grep 'TOOL_' | xargs)
 # Try the auth pattern from docs
 curl -s "$TOOL_BASE_URL/some-read-endpoint" \
   -H "Authorization: Bearer $TOOL_API_TOKEN" | jq .
@@ -154,6 +157,7 @@ done
 Run at least 2 read endpoints and capture real output:
 
 ```bash
+export $(grep -v '^#' .env | grep 'TOOL_' | xargs)
 curl -s "$TOOL_BASE_URL/users/me" -H "Authorization: Bearer $TOOL_API_TOKEN" | jq .
 # → {"id": "u_123", "name": "Alice", "email": "alice@example.com"}
 
@@ -234,7 +238,7 @@ API docs: {URL}
 {Auth flow in 1-2 sentences.}
 
 \`\`\`bash
-source .env
+export $(grep -v '^#' .env | grep 'TOOL_' | xargs)
 curl -s "$TOOL_BASE_URL/endpoint" \
   -H "Authorization: Bearer $TOOL_API_TOKEN" | jq .
 # → {actual output}
@@ -245,7 +249,7 @@ curl -s "$TOOL_BASE_URL/endpoint" \
 ## Verified snippets
 
 \`\`\`bash
-source .env
+export $(grep -v '^#' .env | grep 'TOOL_' | xargs)
 BASE="$TOOL_BASE_URL"
 
 # {What this does}
