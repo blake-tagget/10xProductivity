@@ -15,6 +15,17 @@ cd ~/code/10xProductivity && source .venv/bin/activate
 
 The system Python (3.7) does not have playwright installed. Only the venv at `.venv/` does.
 
+## Local repo shortcuts
+
+Optional env: `CODE_HOME` (parent of clones; defaults to `$HOME/code`). Short names mirror folder names — `REPO_10X` ↔ `10xProductivity`, `REPO_EDDG` ↔ `EDDG-RDA`, `REPO_COLLAB` ↔ `collaboration-station`:
+
+```bash
+cd ~/code/10xProductivity && set -a && source .env && set +a && source tool_connections/repo_paths.sh
+# → cd "$REPO_EDDG" / "$REPO_10X" / "$REPO_COLLAB"
+```
+
+See `env.sample` and `tool_connections/repo_paths.sh`.
+
 ## Tool connection paths
 
 All active connections are in `personal/` (not `tool_connections/`):
