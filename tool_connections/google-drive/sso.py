@@ -80,8 +80,13 @@ def capture(env: dict) -> dict:
             page.wait_for_url("https://drive.google.com/**", timeout=60_000)
         except PlaywrightTimeout:
             if "accounts.google.com" in page.url or "google.com/signin" in page.url:
-                print("  Google sign-in page — complete login manually (3 min timeout)...", flush=True)
-                page.wait_for_url("https://drive.google.com/**", timeout=180_000)
+                print("  Google sign-in page — complete login manually (3 min timeout — Ctrl+C to abort)...", flush=True)
+                try:
+                    page.wait_for_url("https://drive.google.com/**", timeout=180_000)
+                except KeyboardInterrupt:
+                    ctx.close()
+                    browser.close()
+                    raise RuntimeError("Aborted by user — Google Drive login did not complete.")
             else:
                 raise RuntimeError(f"Unexpected URL after Google Drive navigation: {page.url}")
 
@@ -114,6 +119,7 @@ def capture(env: dict) -> dict:
             f"{k}={cookie_dict[k]}" for k in cookie_keys
             if k in cookie_dict and cookie_dict[k]
         )
+        ctx.close()
         browser.close()
 
     print(f"    SAPISID captured ({len(sapisid)} chars)")

@@ -67,6 +67,14 @@ Before asking the user for anything:
 2. Document the refresh command in the connection file: `python3 personal/{tool-name}/sso.py` — the agent cannot self-refresh without the user present.
 3. Document the token TTL (usually ~8h) — so the user knows when to expect re-authentication prompts.
 
+**The browser is a traffic sniffer, not an automation target.** Use Playwright once to capture auth tokens — then call the REST API directly for all subsequent operations. If you find yourself using Playwright to click buttons or read DOM content for regular operations, stop — you haven't found the API yet.
+
+- Attach `ctx.on("request", ...)` at the **context level** (not `page.on`), before the user hits the login page. Page-level listeners miss requests from service workers and background frames — context-level catches everything.
+- The user's only job is to log in and optionally perform one target action (e.g. "send yourself a message"). The agent silently captures tokens and endpoint shapes from the background traffic. Non-technical users never need to open DevTools.
+- Some platforms issue separate tokens per service (one for their main API, another for internal subsystems). Capture all distinct `Authorization` header values you see — each unique one is a separate credential to store in `.env`.
+- ⚠ Never disable TLS verification (`ssl.CERT_NONE`, `verify=False`, `ignore_https_errors=True`). Production services always have valid certificates. SSL errors mean the base URL is wrong — not the cert.
+- ⚠ If using a persistent browser profile and `sso.py` fails to launch, a stale `SingletonLock` file is the likely cause. Add `rm -f "$PROFILE_DIR/SingletonLock"` at the top of `sso.py` before launching, and kill any lingering browser processes tied to that profile.
+
 **When to stop trying:** If browser session auth succeeds (you can log in and see data in the browser) but REST API calls return 401 anyway, the instance has API-level access restrictions that session cookies can't bypass. This is an admin policy, not a fixable bug. Document it as "API access restricted — this tool cannot be automated at this instance" and move on. Do not keep probing different endpoints.
 
 If a viable zero-friction method exists → ask the user only for what that method requires, then proceed to Step 1.
@@ -87,12 +95,13 @@ Sites redirect. Confirm the real base URL before researching. Note any site-vari
 
 ### Step 2: Research the API
 
-Do not guess. Find the official API docs.
+**If you can browse it, the API exists.** Every web app is a REST/GraphQL client. The browser already has a valid session and makes every call you need to replicate. Official docs are the fastest path — but if they're incomplete or the key endpoints return 403, the browser Network tab is the ground truth.
 
 **Search order:**
 1. Official docs (`docs.tool.com/api` or `developer.tool.com`)
 2. OpenAPI/Swagger spec (`/api/swagger.json`, `/openapi.json`)
 3. GitHub code search — working callers are more accurate than docs
+4. **Browser traffic capture** — when docs are missing or incomplete: during the `sso.py` session, your `ctx.on("request", ...)` listener is already watching. Ask the user to perform the target action (search, post, open a file) and read the captured requests. The URL, headers, and body are everything you need to replay the call directly.
 
 **Collect before moving on:**
 - Base URL (production)
@@ -108,6 +117,8 @@ Do not guess. Find the official API docs.
 ### Step 3: Store credentials
 
 Add to `.env` (repo root) only — do not edit root `env.sample` (it is a stub) or other shared index files. Document new variables in `personal/{tool}/setup.md` under **`.env` entries**.
+
+> **`sso.py` must read credentials from `.env`, never hardcode them.** Even in `personal/`, scripts must call `load_env()` and read `SF_USERNAME`, `SF_PASSWORD`, etc. from the parsed env dict — not from module-level string literals. Hardcoded credentials in scripts are a scrubbing risk and make the recipe non-generalizable. If a value is missing from `.env`, prompt the user at runtime (`input()` / `getpass`) rather than baking it in.
 
 > **Watch for tools with explicit resource-sharing requirements.** Some tools (e.g. Notion) require you to explicitly grant the integration access to specific resources (pages, databases) even after auth succeeds. Workspace-level installation ≠ data access. If auth passes but read endpoints return 404 or empty results, look for a resource-level sharing step — usually found in the tool's Settings → Integrations/Apps → edit the integration → content/resource access panel. Document this in the Notes section of the connection file.
 
@@ -285,6 +296,8 @@ curl -s "$BASE/endpoint" -H "Authorization: Bearer $TOOL_API_TOKEN" | jq .
 ### Step 6: Update verified_connections.md
 
 Once both files are written and at least 2 snippets are verified with real output, add the tool to your active capability index.
+
+> **Eligibility vs scrubbing — these are different gates at different stages.** Credentials, org-specific URLs, and personal data should always go in `.env` — not hardcoded in scripts. But if they do exist in `personal/` files, `personal/` is gitignored and they will never be committed. Either way, they are **scrubbing concerns** handled later in the owner-add or contribute workflow, not eligibility disqualifiers at this stage. Eligibility (Step 2 of `contributing.md`) asks only whether the tool is commercial/public and whether the auth pattern is general *in principle* — not whether your current files are already clean. A recipe that still needs scrubbing is still eligible; it just needs to be cleaned before promotion.
 
 Read the tool's `connection-*.md` frontmatter and append to `verified_connections.md`:
 
