@@ -1,55 +1,32 @@
 # 10xProductivity — Claude Code Instructions
 
-At the start of every session, read these two files:
+## SECURITY: Direct API calls are blocked
 
-1. `~/code/10xProductivity/verified_connections.md` — active tool connections and capability index
-2. `~/code/10xProductivity/workflows/enterprise-search/enterprise-search.md` — cross-tool search workflow
+**Do NOT read `.env`, `personal/*/` credential files, or any file in this repo that contains tokens, cookies, or API keys. Do NOT run scripts that load credentials and make authenticated requests (e.g. `draw_data_mesh.py`, `read_miro.py`, `sso.py`, Playwright sessions).**
 
-## Critical: always activate the venv
+Reason: reading credential values into context embeds them in chat/Cursor logs. These connections must be accessed via MCP servers only.
 
-All tool operations that use Playwright (Google Drive, Slack SSO refresh, Sana SSO refresh) require the venv:
+Connections with token-safe CLI wrappers (allowed — credential loaded inside script, never echoed):
+- **Miro** — `personal/miro/cli.py` (copied from `tool_connections/miro/cli.py`)
+- **Slack** — `personal/slack/cli.py` (copied from `tool_connections/slack/cli.py`)
+- **Sana** — `personal/sana/cli.py` (copied from `tool_connections/sana/cli.py`)
+- **Google Drive** — `personal/google-drive/cli.py` (copied from `tool_connections/google-drive/cli.py`; uses `~/.browser_automation/gdrive_auth.json`, not `.env`)
+- **Snowflake** — `personal/snowflake/cli.py` (copied from `tool_connections/snowflake/cli.py`; uses `~/.snowflake/config.toml`, not `.env`)
 
-```bash
-cd ~/code/10xProductivity && source .venv/bin/activate
-```
+Connections still blocked (no CLI or MCP yet): **Outlook, GitHub.com**.
 
-The system Python (3.7) does not have playwright installed. Only the venv at `.venv/` does.
+If the user asks to use a blocked tool, respond: "No MCP server or CLI wrapper exists for [tool] yet — I can't make that call without reading your credentials."
 
-## Local repo shortcuts
+---
 
-Optional env: `CODE_HOME` (parent of clones; defaults to `$HOME/code`). Short names mirror folder names — `REPO_10X` ↔ `10xProductivity`, `REPO_EDDG` ↔ `EDDG-RDA`, `REPO_COLLAB` ↔ `collaboration-station`:
+## Reference only (safe to read, no credentials)
 
-```bash
-cd ~/code/10xProductivity && set -a && source .env && set +a && source tool_connections/repo_paths.sh
-# → cd "$REPO_EDDG" / "$REPO_10X" / "$REPO_COLLAB"
-```
+`verified_connections.md` — documents what connections exist and their current status.
 
-See `env.sample` and `tool_connections/repo_paths.sh`.
+## Repo path shortcuts
 
-## Tool connection paths
-
-All active connections are in `personal/` (not `tool_connections/`):
-
-- `personal/slack/` — Slack enterprise SSO session
-- `personal/google-drive/` — Google Drive Playwright session
-- `personal/outlook/` — Outlook M365 SSO tokens
-- `personal/github/` — GitHub.com PAT
-- `personal/sana/` — Sana Agents SSO session
-
-## Refreshing short-lived tokens
+`REPO_10X`, `REPO_EDDG`, `REPO_COLLAB` are defined in `tool_connections/repo_paths.sh`. Source it (without sourcing `.env`) to get the path variables:
 
 ```bash
-cd ~/code/10xProductivity && source .venv/bin/activate
-
-# Slack (~8h)
-python3 tool_connections/shared_utils/playwright_sso.py --slack-only
-
-# Outlook (~1h)
-python3 tool_connections/shared_utils/playwright_sso.py --outlook-only
-
-# Google Drive (days–weeks)
-python3 tool_connections/shared_utils/playwright_sso.py --gdrive-only
-
-# Sana Agents (unknown TTL)
-python3 personal/sana/sso.py --force
+source ~/code/10xProductivity/tool_connections/repo_paths.sh
 ```

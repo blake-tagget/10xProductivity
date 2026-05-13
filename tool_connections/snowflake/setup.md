@@ -14,28 +14,63 @@
    ```
 
 2. **Activate venv and install connector:**
+
+   **Workday users** — pip routes through Artifactory automatically once `~/.config/pip/pip.conf`
+   is configured. If you haven't set that up yet, see `tool_connections/artifactory/setup.md` first.
+   Then:
    ```bash
    cd ~/code/10xProductivity && source .venv/bin/activate
-   pip install snowflake-connector-python --index-url https://pypi.org/simple/
+   pip install snowflake-connector-python
    ```
 
-3. **Copy personal connection script:**
+   **Non-Workday / public PyPI users:**
    ```bash
-   cp tool_connections/snowflake/connection.py personal/snowflake/connection.py
-   # (adjust TOOL_NAME/ENV_FILE paths if needed)
+   cd ~/code/10xProductivity && source .venv/bin/activate
+   pip install snowflake-connector-python
    ```
-   Or use `personal/snowflake/connection.py` which already exists.
+   *(No extra flags needed — `pip install` uses whatever `index-url` is set in your `pip.conf`,
+   defaulting to PyPI if unconfigured.)*
+
+3. **Copy recipe to personal:**
+   ```bash
+   cp -r tool_connections/snowflake/ personal/snowflake/
+   ```
 
 4. **Sync credentials to .env:**
    ```bash
    python3 personal/snowflake/connection.py --sync
    ```
 
-5. **Verify:**
+5. **Verify connection:**
    ```bash
    python3 personal/snowflake/connection.py
    # → SNOWFLAKE_PAT: ok
    ```
+
+6. **Verify CLI:**
+   ```bash
+   python3 personal/snowflake/cli.py check
+   # → {"U": "you@company.com", "WH": "your_warehouse", "ROLE": "...", "account": "..."}
+   ```
+
+## Using the CLI
+
+After setup, run queries from `personal/snowflake/`:
+
+```bash
+python3 personal/snowflake/cli.py query --sql "SELECT CURRENT_USER()"
+python3 personal/snowflake/cli.py query --sql "SELECT * FROM t" --database MY_DB --schema MY_SCHEMA --limit 100
+python3 personal/snowflake/cli.py list-databases
+python3 personal/snowflake/cli.py list-schemas --database MY_DB
+python3 personal/snowflake/cli.py list-tables --database MY_DB --schema MY_SCHEMA
+python3 personal/snowflake/cli.py describe --database MY_DB --schema MY_SCHEMA --table MY_TABLE
+```
+
+All output is JSON on stdout. Credentials are loaded from `~/.snowflake/config.toml` inside
+the script — they never appear as arguments or in stdout.
+
+**Token renewal:** Snowflake UI → Profile → Programmatic Access Tokens → Generate new token →
+update `password` in `~/.snowflake/config.toml`.
 
 ## See also
 
