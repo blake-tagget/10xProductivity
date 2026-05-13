@@ -34,12 +34,26 @@ the browser session after login.
 ## Using the CLI
 
 ```bash
+# Search for pages
 python3 personal/horizon/cli.py search --query "RBAC"
 python3 personal/horizon/cli.py search --query "data platform" --limit 20
+
+# Read a page's full text (renders via headless browser — requires saved browser state from sso.py)
+python3 personal/horizon/cli.py get-page --url "https://horizon.workdayinternal.com/home/ls/content/5759492855152208/ia-rbac"
+
+# Get content metadata only (title, tags, department — not the rich text body)
 python3 personal/horizon/cli.py get-content --id 5759492855152208
+
+# Browse the intranet navigation tree
 python3 personal/horizon/cli.py list-navigation
+
+# List your saved/bookmarked items
 python3 personal/horizon/cli.py list-saved
 ```
+
+**`get-page` vs `get-content`:** Use `get-page` to read a page's actual text content
+(renders the page via headless Playwright). Use `get-content` only when you need
+metadata (tags, department, author) without the body text.
 
 All output is JSON on stdout. Credentials are loaded from `.env` inside the
 script — they never appear as arguments or in stdout.

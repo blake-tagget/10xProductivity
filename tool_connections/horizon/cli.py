@@ -7,6 +7,7 @@ arguments or in stdout.
 
 Usage:
   python3 personal/horizon/cli.py check
+  python3 personal/horizon/cli.py get-page --url https://horizon.workdayinternal.com/home/ls/content/5759492855152208/ia-rbac
   python3 personal/horizon/cli.py get-content --id 5759492855152208
   python3 personal/horizon/cli.py search --query "RBAC" [--limit 10]
   python3 personal/horizon/cli.py list-navigation
@@ -264,6 +265,47 @@ def cmd_list_saved(args):
     print(json.dumps(out, indent=2))
 
 
+def cmd_get_page(args):
+    state_path = Path.home() / ".browser_automation" / "horizon_state.json"
+    if not state_path.exists():
+        sys.exit(
+            "ERROR: No browser state found. Run: python3 personal/horizon/sso.py"
+        )
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError:
+        import subprocess
+        subprocess.run([sys.executable, "-m", "pip", "install", "playwright", "-q"], check=True)
+        subprocess.run([sys.executable, "-m", "playwright", "install", "chromium", "-q"], check=True)
+        from playwright.sync_api import sync_playwright
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        context = browser.new_context(storage_state=str(state_path))
+        page = context.new_page()
+        page.goto(args.url, wait_until="networkidle", timeout=30_000)
+
+        text = page.evaluate("""() => {
+            ['nav','header','footer','.lumx-navigation','.top-bar',
+             '[data-id=\"navigation\"]','[data-id=\"header\"]'].forEach(sel => {
+                document.querySelectorAll(sel).forEach(el => el.remove());
+            });
+            const main = document.querySelector('main, [role=main], article, .content-page') || document.body;
+            return main.innerText;
+        }""")
+        title = page.title()
+        browser.close()
+
+    lines = [l.strip() for l in text.splitlines() if len(l.strip()) > 10]
+    seen, deduped = set(), []
+    for line in lines:
+        if line not in seen:
+            seen.add(line)
+            deduped.append(line)
+
+    print(json.dumps({"title": title, "url": args.url, "text": deduped}, indent=2))
+
+
 # ── Entry point ───────────────────────────────────────────────────────────────
 
 def main():
@@ -273,6 +315,9 @@ def main():
     sub = parser.add_subparsers(dest="command", required=True)
 
     sub.add_parser("check", help="Verify token and print org/user info")
+
+    p_page = sub.add_parser("get-page", help="Render a Horizon page and extract full text (uses saved browser state)")
+    p_page.add_argument("--url", required=True, help="Full Horizon page URL")
 
     p_content = sub.add_parser("get-content", help="Get content metadata and text by ID")
     p_content.add_argument("--id", required=True, help="Content ID (numeric)")
@@ -287,6 +332,7 @@ def main():
     args = parser.parse_args()
     {
         "check": cmd_check,
+        "get-page": cmd_get_page,
         "get-content": cmd_get_content,
         "search": cmd_search,
         "list-navigation": cmd_list_navigation,

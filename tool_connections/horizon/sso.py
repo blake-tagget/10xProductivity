@@ -141,10 +141,19 @@ def capture(env: dict) -> dict:
 
         captured["HORIZON_API_BASE"] = f"https://{API_HOST}"
 
+        # Save full browser state so headless page loads can reuse the session
+        state_path = Path.home() / ".browser_automation" / "horizon_state.json"
+        state_path.parent.mkdir(parents=True, exist_ok=True)
+        context.storage_state(path=str(state_path))
+        print(f"  Browser state saved to {state_path}")
+
         time.sleep(2)
         browser.close()
 
     return {k: v for k, v in captured.items() if k in ENV_KEYS}
+
+
+STORAGE_STATE_PATH = Path.home() / ".browser_automation" / "horizon_state.json"
 
 
 if __name__ == "__main__":
