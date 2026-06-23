@@ -1,7 +1,7 @@
 ---
 tool: miro
 auth: sso-session
-description: Miro — visual collaboration boards. Internal API at miro.com/api/v1/ using session token cookie captured after Okta SAML. No OAuth app needed. List boards, read board content, get org info.
+description: Miro — visual collaboration boards. Internal API at miro.com/api/v1/ for reads; headless Playwright SDK for writes/deletes via cli.py. SSO via Okta SAML session token.
 env_vars:
   - MIRO_TOKEN
 ---
@@ -12,7 +12,7 @@ Visual collaboration platform. Uses internal API at `miro.com/api/v1/` — the s
 
 ⚠ This is NOT the official Miro REST API (`api.miro.com/v2/`), which requires OAuth app registration. The internal API works identically for reading and requires zero setup beyond SSO.
 
-**Verified:** Production (miro.com) — users/me, recent-boards, boards list, frames, board content — 2026-03-31.
+**Verified:** Production (miro.com) — REST reads, headless SDK writes/deletes — 2026-06-23.
 
 ---
 
@@ -21,7 +21,7 @@ Visual collaboration platform. Uses internal API at `miro.com/api/v1/` — the s
 ```bash
 # .env:
 # MIRO_TOKEN=your-token-here
-# Refresh: source .venv/bin/activate && python3 personal/miro/sso.py --force
+# Refresh: python3 tool_connections/miro/sso.py --force
 ```
 
 ---
@@ -50,9 +50,27 @@ def miro_get(path):
 
 ## API Patterns
 
-See `api-patterns.md` for the full reference: verified endpoints, board content extraction, widget schema, frame membership, and confirmed 404s. **Read that file before writing Miro API code** — the `/widgets/` endpoint is a trap.
+See `api-patterns.md` for the full reference. **Read that file before writing Miro API code** — the `/widgets/` endpoint is a trap.
 
-## Verified snippets
+---
+
+## CLI wrapper (preferred)
+
+Token-safe — credential loaded inside script, never echoed.
+
+```bash
+python3 tool_connections/miro/cli.py list-boards
+python3 tool_connections/miro/cli.py get-frames --board "BOARD_ID="
+python3 tool_connections/miro/cli.py audit-board --board "BOARD_ID=" --margin 3500
+python3 tool_connections/miro/cli.py create-items --board "BOARD_ID=" --file items.json
+python3 tool_connections/miro/cli.py delete-region --board "BOARD_ID=" --x-min 4500 --dry-run
+```
+
+- Writes/deletes: **headless Playwright** by default (`--headed` to debug)
+- SSO refresh: **headed browser only** (`sso.py` — do not headless SSO)
+- Workshop workflow: `workshop-playbook.md`
+
+## Verified snippets (REST read)
 
 ```python
 import urllib.parse
@@ -98,8 +116,8 @@ for w in r["content"]["widgets"]:
 
 ```bash
 source .venv/bin/activate
-python3 personal/miro/sso.py --force
-# Okta SSO auto-completes on managed machines
+python3 tool_connections/miro/sso.py --force
+# Opens headed browser — Okta SSO auto-completes on managed machines
 ```
 
 ---
@@ -108,5 +126,6 @@ python3 personal/miro/sso.py --force
 
 - Token is the `.miro.com` domain cookie named `token` — captured post-SAML
 - Board IDs in URLs are base64 — pass URL-encoded when used in API paths (e.g. `uXjVGseOKNM%3D`)
-- `miro.com/api/v1/` (internal) vs `api.miro.com/v2/` (official OAuth) — these are different APIs; this connection uses the internal one
+- `miro.com/api/v1/` (internal) vs `api.miro.com/v2/` (official OAuth) — different APIs
 - Token TTL: session-based, typically days; re-run `sso.py --force` on 401
+- Playwright chromium: `python3 -m playwright install chromium` (one-time, for writes)

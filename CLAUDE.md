@@ -7,11 +7,14 @@
 Reason: reading credential values into context embeds them in chat/Cursor logs. These connections must be accessed via MCP servers only.
 
 Connections with token-safe CLI wrappers (allowed — credential loaded inside script, never echoed):
-- **Miro** — `personal/miro/cli.py` (copied from `tool_connections/miro/cli.py`)
+- **Miro** — `tool_connections/miro/cli.py` (reads REST; writes/deletes headless Playwright SDK)
 - **Slack** — `personal/slack/cli.py` (copied from `tool_connections/slack/cli.py`)
 - **Sana** — `personal/sana/cli.py` (copied from `tool_connections/sana/cli.py`)
 - **Google Drive** — `personal/google-drive/cli.py` (copied from `tool_connections/google-drive/cli.py`; uses `~/.browser_automation/gdrive_auth.json`, not `.env`)
 - **Snowflake** — `personal/snowflake/cli.py` (copied from `tool_connections/snowflake/cli.py`; uses `~/.snowflake/config.toml`, not `.env`)
+
+Connections available via MCP (prefer over Python scripts for browser tasks):
+- **Playwright browser automation** — use the `playwright` MCP for web navigation, clicking, form-filling, screenshots. No credentials needed. Note: the SSO refresh scripts (`playwright_sso.py` and per-tool `sso.py`) still run via the CLI wrappers — they capture session tokens and write them to `.env` / `~/.browser_automation/`. Use the MCP for general browser automation tasks only.
 
 Connections still blocked (no CLI or MCP yet): **Outlook, GitHub.com**.
 

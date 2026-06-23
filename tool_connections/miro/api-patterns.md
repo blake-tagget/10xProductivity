@@ -1,8 +1,8 @@
 ---
 tool: miro
 type: api-patterns
-description: Verified Miro internal API patterns — read AND write. REST /api/v1/ for reads; window.miro.board SDK via Playwright for writes (REST write endpoints are CSRF-blocked). Read before writing any Miro API code.
-updated: 2026-04-06
+description: Verified Miro internal API patterns — read AND write. REST /api/v1/ for reads; window.miro.board SDK via headless Playwright for writes/deletes (REST write endpoints are CSRF-blocked). Read before writing any Miro API code.
+updated: 2026-06-23
 ---
 
 # Miro API — Verified Patterns
@@ -218,11 +218,99 @@ POST /boards/{id}/stickynotes/ → 403 wrongCsrfToken
 
 ---
 
-## ✅ Correct write path: window.miro.board SDK via Playwright
+## ✅ Correct write path: window.miro.board SDK via Playwright (headless OK)
 
-After a board loads in a headed Playwright browser (with the `token` cookie injected), `window.miro.board` exposes the full Miro Plugin SDK. Call it via `page.evaluate()`. No REST auth issues.
+After a board loads in Playwright (with the `token` cookie injected), `window.miro.board` exposes the full Miro Plugin SDK. Call it via `page.evaluate()`. No REST auth issues.
 
-### Setup
+**Use the CLI wrapper** — do not hand-roll Playwright unless you need something the CLI doesn't cover:
+
+```bash
+source .venv/bin/activate
+python3 tool_connections/miro/cli.py audit-board --board "BOARD_ID=" --margin 3500
+python3 tool_connections/miro/cli.py create-items --board "BOARD_ID=" --file items.json
+python3 tool_connections/miro/cli.py delete-region --board "BOARD_ID=" --x-min 4500 --dry-run
+```
+
+- **Default: headless** — no browser window. Add `--headed` to debug.
+- **SDK warmup: ~14s** after `domcontentloaded` before `window.miro.board` is ready.
+- **Chromium required:** `python3 -m playwright install chromium`
+- **SSO is separate** — `sso.py` always uses a headed browser for Okta; do not change that for writes.
+
+### Headless setup (verified 2026-06)
+
+```python
+from playwright.sync_api import sync_playwright
+import time
+
+with sync_playwright() as p:
+    browser = p.chromium.launch(headless=True)
+    ctx = browser.new_context(
+        ignore_https_errors=True,
+        viewport={"width": 1400, "height": 900},
+    )
+    ctx.add_cookies([{"name": "token", "value": TOKEN, "domain": ".miro.com",
+                      "path": "/", "secure": True}])
+    page = ctx.new_page()
+    page.goto(f"https://miro.com/app/board/{BOARD_ID}/",
+              wait_until="domcontentloaded", timeout=30000)
+    time.sleep(14)
+
+    sdk_ready = page.evaluate(
+        "() => !!(window.miro && window.miro.board && window.miro.board.createShape)"
+    )
+    assert sdk_ready
+```
+
+### board.remove — requires id AND type
+
+```javascript
+// WRONG — ZodError: Expected string, received array
+await miro.board.remove({ id: [id1, id2] });
+
+// WRONG — ZodError: type is Required
+await miro.board.remove({ id });
+
+// RIGHT — one item at a time, children before frames
+await miro.board.remove({ id: shapeId, type: 'shape' });
+await miro.board.remove({ id: frameId, type: 'frame' });
+```
+
+Delete order used by `cli.py delete-region`: shape → text → sticky_note → connector → frame.
+
+### parentId is read-only at create time
+
+```javascript
+// FAILS: "Cannot change this property, because it's read-only: parentId"
+await miro.board.createShape({ ..., parentId: frameId });
+
+// WORKS: absolute board coordinates (visually inside the frame)
+await miro.board.createShape({ x: 5500, y: 1200, ... });
+```
+
+Frame membership can be adjusted manually in the UI after creation, or use absolute coords that align with frame bounds from `audit-board`.
+
+### Audit board bounds before placing content
+
+```bash
+python3 tool_connections/miro/cli.py audit-board --board "BOARD_ID=" --margin 3500
+# → occupiedBounds, workshopOriginCenter
+```
+
+Or run `audit_board.py` directly. Computes widget bounding box from `/content` and suggests a safe origin to the right of existing content.
+
+### create-items JSON types
+
+| type | SDK method | Notes |
+|------|------------|-------|
+| `frame` | `createFrame` | title, x, y, width, height |
+| `shape` | `createShape` | content is HTML; absolute x,y |
+| `text` | `createText` | absolute x,y |
+| `sticky_note` | `createStickyNote` | plain text content |
+| `connector` | `createConnector` | start/end with `{x,y}` or `{ref}` |
+
+See `examples/minimal_items.json` for a working batch.
+
+### Setup (manual Playwright — prefer cli.py)
 
 ```python
 import json, time
@@ -361,3 +449,6 @@ viewport, ui, notifications, storage, events, getUserInfo, getInfo
 | `fontSize` | `11.0` (float) | `11` (int) |
 | Connector endpoints | `startItem: {id}` | `start: {item: id}` |
 | Data passing | f-string interpolation | `page.evaluate(js, data)` arg |
+| `parentId` on create | `createShape({ parentId })` | absolute x,y at create time |
+| `board.remove` | `{ id: [...] }` or `{ id }` only | `{ id, type }` one at a time |
+| Playwright browser | always headed | headless works for SDK writes |
