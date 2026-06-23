@@ -1,42 +1,42 @@
 [
   {
     "type": "frame",
-    "ref": "zone",
-    "title": "Example Live Zone",
+    "ref": "example-frame",
+    "title": "Example frame",
     "x": 5500,
     "y": 1200,
     "width": 1400,
     "height": 900,
-    "style": { "fillColor": "#fff8e1" }
+    "style": { "fillColor": "#ffffff" }
   },
   {
     "type": "text",
     "x": 5500,
     "y": 820,
-    "width": 800,
-    "content": "<p><strong>Example banner</strong> — place frames at audit-board workshopOriginCenter</p>",
+    "width": 600,
+    "content": "<p><strong>Label</strong></p>",
     "style": { "fontSize": 14, "color": "#374151", "textAlign": "center" }
   },
   {
     "type": "sticky_note",
     "x": 5200,
     "y": 1100,
-    "content": "Capture ideas here",
+    "content": "Sticky note text",
     "style": { "fillColor": "#fff9b1", "textAlign": "center" }
   },
   {
     "type": "shape",
     "x": 5500,
     "y": 1200,
-    "width": 1200,
-    "height": 100,
-    "content": "<p><strong>Facilitator seed</strong> — use absolute x,y; parentRef does not work at create time</p>",
+    "width": 400,
+    "height": 120,
+    "content": "<p><strong>Shape</strong></p><p>HTML content</p>",
     "style": {
       "fillColor": "#f3f4f6",
       "borderColor": "#9ca3af",
       "borderWidth": 1,
       "fontSize": 12,
-      "textAlign": "left",
+      "textAlign": "center",
       "textAlignVertical": "middle"
     }
   }

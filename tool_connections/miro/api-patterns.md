@@ -289,14 +289,17 @@ await miro.board.createShape({ x: 5500, y: 1200, ... });
 
 Frame membership can be adjusted manually in the UI after creation, or use absolute coords that align with frame bounds from `audit-board`.
 
-### Audit board bounds before placing content
+### audit-board — widget bounds and placement coordinates
+
+REST read of `/content` + `/frames`. Returns bounding box of all widgets and a
+`suggestedOriginCenter` at `occupiedBounds.xMax + margin` (same y as occupied yMin).
 
 ```bash
 python3 tool_connections/miro/cli.py audit-board --board "BOARD_ID=" --margin 3500
-# → occupiedBounds, workshopOriginCenter
 ```
 
-Or run `audit_board.py` directly. Computes widget bounding box from `/content` and suggests a safe origin to the right of existing content.
+Response fields: `occupiedBounds` (xMin/xMax/yMin/yMax), `suggestedOriginCenter`,
+`frames`, `widgetCount`.
 
 ### create-items JSON types
 

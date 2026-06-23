@@ -400,12 +400,12 @@ def main():
 
     p_audit = sub.add_parser(
         "audit-board",
-        help="Compute canvas bounds and a safe placement origin (REST read)",
+        help="Report widget bounds and suggested empty-canvas origin (REST read)",
     )
     p_audit.add_argument("--board", required=True, help="Board ID")
     p_audit.add_argument(
         "--margin", type=float, default=3500,
-        help="Gap (px) between existing content and suggested workshop origin",
+        help="Gap (px) past occupiedBounds.xMax for suggestedOriginCenter",
     )
 
     p_create = sub.add_parser("create-items", help="Batch-create items from JSON")

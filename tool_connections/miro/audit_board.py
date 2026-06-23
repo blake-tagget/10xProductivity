@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compute canvas bounds and a safe workshop zone for a Miro board.
+"""Compute widget bounding box on a Miro board and suggest empty-canvas coordinates.
 
 Prefer the CLI wrapper:
   python3 tool_connections/miro/cli.py audit-board --board "BOARD_ID=" --margin 3500
@@ -122,12 +122,14 @@ def audit_board(board_id: str, margin: float = 3000) -> dict:
         "frames": frame_rects,
         "occupiedBounds": occupied,
         "marginPx": margin,
-        "workshopOriginCenter": origin,
+        "suggestedOriginCenter": origin,
     }
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Audit Miro board bounds for workshop placement.")
+    parser = argparse.ArgumentParser(
+        description="Report Miro board widget bounds and a suggested empty-canvas origin."
+    )
     parser.add_argument("--board", required=True, help="Board ID")
     parser.add_argument("--margin", type=float, default=3000, help="Gap from existing content (px)")
     args = parser.parse_args()

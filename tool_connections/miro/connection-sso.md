@@ -68,7 +68,6 @@ python3 tool_connections/miro/cli.py delete-region --board "BOARD_ID=" --x-min 4
 
 - Writes/deletes: **headless Playwright** by default (`--headed` to debug)
 - SSO refresh: **headed browser only** (`sso.py` — do not headless SSO)
-- Workshop workflow: `workshop-playbook.md`
 
 ## Verified snippets (REST read)
 

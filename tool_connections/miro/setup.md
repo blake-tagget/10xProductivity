@@ -54,8 +54,7 @@ All commands load `MIRO_TOKEN` from repo-root `.env` internally.
 Add `--headed` to `create-items` or `delete-region` when debugging.
 
 Full item JSON schema and gotchas: `api-patterns.md`  
-Workshop workflow: `workshop-playbook.md`  
-Example items file: `examples/minimal_items.json`
+Example batch file: `examples/minimal_items.json`
 
 ---
 
@@ -76,8 +75,7 @@ tool_connections/miro/
   cli.py              # Main CLI — read + write + audit + delete
   read_miro.py        # Lightweight REST read helper
   sso.py              # Token capture (headed browser only)
-  audit_board.py      # Bounds calculator (also: cli.py audit-board)
+  audit_board.py      # Bounds report (also: cli.py audit-board)
   api-patterns.md     # Verified API/SDK patterns — read before coding
-  workshop-playbook.md
   examples/minimal_items.json
 ```
