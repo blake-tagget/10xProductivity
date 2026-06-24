@@ -31,6 +31,10 @@ python3 tool_connections/miro/read_miro.py --check
 # → OK — session valid
 
 python3 tool_connections/miro/cli.py list-boards
+# → [{"id": "uXjVGseOKNM=", "title": "My Board"}, ...]
+
+python3 tool_connections/miro/cli.py audit-board --board "BOARD_ID=" --margin 3500
+# → {"occupiedBounds": {"xMin": -200, "xMax": 1324, ...}, "suggestedOriginCenter": {"x": 4824, "y": 80}, ...}
 ```
 
 If 401: `python3 tool_connections/miro/sso.py --force`

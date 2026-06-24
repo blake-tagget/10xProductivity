@@ -36,8 +36,8 @@ create-items JSON schema (array of items, processed top-to-bottom):
 
 Gotchas (verified 2026-06):
 - x, y are CENTER coordinates (Miro SDK convention).
-- parentRef on createShape/createText fails: parentId is read-only at create time.
-  Use absolute coordinates instead; see examples/minimal_items.json.
+- parentId is read-only at create time — use absolute x,y coordinates only.
+  See examples/minimal_items.json and api-patterns.md.
 - board.remove requires { id, type } per item — not an array of ids.
 - borderWidth, strokeWidth, fontSize must be integers (not floats).
 - Playwright chromium must be installed: python3 -m playwright install chromium
@@ -240,8 +240,7 @@ async (items) => {
                 });
 
             } else if (item.type === 'shape') {
-                const parentId = resolveParent(item.parentRef);
-                const params = {
+                obj = await window.miro.board.createShape({
                     content: item.content || '',
                     shape:   item.shape || 'rectangle',
                     x:       item.x,
@@ -260,13 +259,10 @@ async (items) => {
                         textAlign:         style.textAlign         || 'left',
                         textAlignVertical: style.textAlignVertical || 'middle',
                     },
-                };
-                if (parentId) params.parentId = parentId;
-                obj = await window.miro.board.createShape(params);
+                });
 
             } else if (item.type === 'text') {
-                const parentId = resolveParent(item.parentRef);
-                const params = {
+                obj = await window.miro.board.createText({
                     content: item.content || '',
                     x:       item.x,
                     y:       item.y,
@@ -277,9 +273,7 @@ async (items) => {
                         textAlign: style.textAlign || 'left',
                         fillColor: style.fillColor || 'transparent',
                     },
-                };
-                if (parentId) params.parentId = parentId;
-                obj = await window.miro.board.createText(params);
+                });
 
             } else if (item.type === 'sticky_note') {
                 obj = await window.miro.board.createStickyNote({

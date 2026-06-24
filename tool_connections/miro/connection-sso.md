@@ -77,17 +77,21 @@ import urllib.parse
 # Current user
 r = miro_get("/users/me/")
 print(r["name"], r["email"])
+# → Alice Example  alice@example.com
 
 # Recent boards (returns a list directly, not {"data": [...]})
 boards = miro_get("/recent-boards")
 for b in boards[:5]:
     print(b["id"], b["title"])
+# → uXjVGseOKNM=  My Board
+# → uXjVHUL3UGM=  Team Planning
 
 # Frames in a board (with titles and positions)
 board_id = urllib.parse.quote("BOARD_ID=", safe="")
 frames = miro_get(f"/boards/{board_id}/frames")
 for f in frames["data"]:
     print(f["id"], f["title"])
+# → 3458764598765432101  Draft - Architecture
 
 # Full board content — ALL widget text, positions, parent frames
 # /widgets/ returns stubs only — use /content instead

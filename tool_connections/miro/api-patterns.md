@@ -301,6 +301,16 @@ python3 tool_connections/miro/cli.py audit-board --board "BOARD_ID=" --margin 35
 Response fields: `occupiedBounds` (xMin/xMax/yMin/yMax), `suggestedOriginCenter`,
 `frames`, `widgetCount`.
 
+```json
+{
+  "boardTitle": "Example Board",
+  "widgetCount": 42,
+  "occupiedBounds": { "xMin": -200, "xMax": 1324, "yMin": 80, "yMax": 2400 },
+  "suggestedOriginCenter": { "x": 4824, "y": 80 },
+  "frames": [{ "title": "Draft - Architecture", "xMin": 0, "xMax": 1200, "yMin": 100, "yMax": 900 }]
+}
+```
+
 ### create-items JSON types
 
 | type | SDK method | Notes |
