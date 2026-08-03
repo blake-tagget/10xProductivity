@@ -16,6 +16,10 @@ Connections with token-safe CLI wrappers (allowed — credential loaded inside s
 Connections available via MCP (prefer over Python scripts for browser tasks):
 - **Playwright browser automation** — use the `playwright` MCP for web navigation, clicking, form-filling, screenshots. No credentials needed. Note: the SSO refresh scripts (`playwright_sso.py` and per-tool `sso.py`) still run via the CLI wrappers — they capture session tokens and write them to `.env` / `~/.browser_automation/`. Use the MCP for general browser automation tasks only.
 
+MCP setup in progress (see `tool_connections/mcp-snowflake-sigma.md`):
+- **Sigma MCP** — remote OAuth MCP for BI queries; setup in `tool_connections/sigma/setup.md`
+- **Snowflake MCP** — blocked on ED&A platform; interim = `personal/snowflake/cli.py`; see `tool_connections/snowflake/mcp.md`
+
 Connections still blocked (no CLI or MCP yet): **Outlook, GitHub.com**.
 
 If the user asks to use a blocked tool, respond: "No MCP server or CLI wrapper exists for [tool] yet — I can't make that call without reading your credentials."

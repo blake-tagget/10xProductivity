@@ -29,7 +29,7 @@ Apps are built for humans on laptops. Browsers, CLIs, REST APIs — they're all 
 Your laptop is the platform. The agent is just a smarter version of you running scripts. No new infrastructure required.
 
 **2. Security by locality**
-The threat model is identical to you doing it manually. Nothing new is exposed. No cloud service sits between you and your tools holding your credentials. The only trust you extend is to the agent runtime itself (Cursor, Claude Code, Codex, Copilot, etc.) — which you've already decided to trust.
+The threat model is identical to you doing it manually. Nothing new is exposed. No cloud service sits between you and your tools holding your credentials. The only trust you extend is to the agent runtime itself (Cursor, Claude Code, Codex, etc.) — which you've already decided to trust.
 
 **3. Identity = accountability**
 Your personal token. Your name on every action. This is a stronger audit trail than most enterprise automation, where actions are taken by service accounts with shared credentials. The agent acts *as you*: you get the credit, you get the blame, and the audit log is already there in every system you use.

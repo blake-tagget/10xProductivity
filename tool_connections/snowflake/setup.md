@@ -74,4 +74,5 @@ update `password` in `~/.snowflake/config.toml`.
 
 ## See also
 
-`tool_connections/snowflake/connection-pat.md` — full auth examples and query patterns.
+`tool_connections/snowflake/connection-pat.md` — full auth examples and query patterns.  
+`tool_connections/snowflake/mcp.md` — Snowflake managed MCP for Cursor (pending ED&A platform setup; tracked in ISSAS-1780).
