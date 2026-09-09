@@ -4,7 +4,11 @@ verified_connections.md
 __pycache__/
 *.pyc
 *.pyo
+*.egg-info/
 .DS_Store
+# Raw session/HAR trace files (may contain session cookies)
+**/*trace*.json
+**/*.har
 # ~/.browser_automation/ lives outside the repo (home dir) — git never tracks it
 /scripts
 /personal/
