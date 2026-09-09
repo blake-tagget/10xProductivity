@@ -9,6 +9,8 @@ description: Rollup tracker for Snowflake and Sigma MCP adoption at Workday — 
 
 Single reference for the analyst-community request to use Snowflake and Sigma MCP servers from Cursor/Claude for read-only GTM / Salesforce analysis.
 
+**Broader ED&A stack:** Atlan MCP is documented separately (`tool_connections/atlan/setup.md`). Snowflake/dbt MCP options and the keep-CLI decision are reconciled in `tool_connections/mcp-eda-data-stack.md`.
+
 **Jira:** [ISSAS-1780](https://jira2.workday.com/browse/ISSAS-1780)  
 **Registry:** [awesome/mcp](https://ghe.megaleo.com/awesome/mcp) — neither server listed yet (2026-07-27)
 

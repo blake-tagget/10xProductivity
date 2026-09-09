@@ -11,6 +11,8 @@ description: Snowflake managed MCP server — setup status, security gates, and 
 
 Reference for standing up the **Snowflake-managed MCP server** in Cursor. Distinct from the existing PAT/CLI workflow documented in `connection-pat.md` and `setup.md`.
 
+> **Reconciliation:** ED&A also documents a separate stdio Snowflake MCP (PAT via `~/.env.mcp.snowflake`). 10x keeps the PAT CLI as default until a different approach adds clear value. See `tool_connections/mcp-eda-data-stack.md`.
+
 ## Status (2026-07-27)
 
 | Item | State |

@@ -16,9 +16,11 @@ Connections with token-safe CLI wrappers (allowed — credential loaded inside s
 Connections available via MCP (prefer over Python scripts for browser tasks):
 - **Playwright browser automation** — use the `playwright` MCP for web navigation, clicking, form-filling, screenshots. No credentials needed. Note: the SSO refresh scripts (`playwright_sso.py` and per-tool `sso.py`) still run via the CLI wrappers — they capture session tokens and write them to `.env` / `~/.browser_automation/`. Use the MCP for general browser automation tasks only.
 
-MCP setup in progress (see `tool_connections/mcp-snowflake-sigma.md`):
+MCP connections (see `tool_connections/mcp-eda-data-stack.md` for Snowflake/dbt reconciliation):
+- **Atlan** — remote SSO MCP for catalog, lineage, metadata; setup in `tool_connections/atlan/setup.md`
 - **Sigma MCP** — remote OAuth MCP for BI queries; setup in `tool_connections/sigma/setup.md`
-- **Snowflake MCP** — blocked on ED&A platform; interim = `personal/snowflake/cli.py`; see `tool_connections/snowflake/mcp.md`
+- **Snowflake** — keep `personal/snowflake/cli.py` (PAT via `~/.snowflake/config.toml`); Snowflake-managed MCP blocked on ED&A platform — see `tool_connections/snowflake/mcp.md`
+- **dbt Cloud MCP** — deferred until access is provisioned — see `tool_connections/mcp-eda-data-stack.md`
 
 Connections still blocked (no CLI or MCP yet): **Outlook, GitHub.com**.
 

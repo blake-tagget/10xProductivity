@@ -32,6 +32,15 @@ Env: `SLACK_XOXC`, `SLACK_D_COOKIE` (~8h — refresh with `python3 tool_connecti
 
 ---
 
+## Atlan MCP → `tool_connections/atlan/setup.md`
+
+Atlan — catalog search, lineage, glossary, and metadata via hosted MCP. SSO auth; no secrets in `mcp.json`.
+Instance: `https://workday.atlan.com/mcp`
+Auth: SSO via Cursor `mcp_auth` — no env vars
+Status: add after verifying search returns catalog hits
+
+---
+
 ## Adding new connections
 
 Add `tool_connections/{tool}/connection-*.md` with core frontmatter (`name`, `auth`, `description`, `env_vars`). After verifying, append a section to `verified_connections.md` following the format above.

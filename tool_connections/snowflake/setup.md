@@ -75,4 +75,6 @@ update `password` in `~/.snowflake/config.toml`.
 ## See also
 
 `tool_connections/snowflake/connection-pat.md` — full auth examples and query patterns.  
-`tool_connections/snowflake/mcp.md` — Snowflake managed MCP for Cursor (pending ED&A platform setup; tracked in ISSAS-1780).
+`tool_connections/snowflake/mcp.md` — Snowflake managed MCP for Cursor (pending ED&A platform setup; tracked in ISSAS-1780).  
+`tool_connections/mcp-eda-data-stack.md` — reconcile Snowflake CLI vs ED&A MCP options; dbt deferred.  
+`tool_connections/atlan/setup.md` — catalog/lineage MCP (complements Snowflake CLI).
