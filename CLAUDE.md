@@ -11,7 +11,7 @@ Connections with token-safe CLI wrappers (allowed — credential loaded inside s
 - **Slack** — `personal/slack/cli.py` (copied from `tool_connections/slack/cli.py`)
 - **Sana** — `personal/sana/cli.py` (copied from `tool_connections/sana/cli.py`)
 - **Google Drive** — `personal/google-drive/cli.py` (copied from `tool_connections/google-drive/cli.py`; uses `~/.browser_automation/gdrive_auth.json`, not `.env`)
-- **Snowflake** — `personal/snowflake/cli.py` (copied from `tool_connections/snowflake/cli.py`; uses `~/.snowflake/config.toml`, not `.env`)
+- **Snowflake** — `personal/snowflake/cli.py` only when MCP lacks the API or for manual one-offs; **do not** chain many CLI queries in one agent session (lockout risk). Prefer Snowflake MCP for agent SQL — see `tool_connections/mcp-eda-data-stack.md`
 
 Connections available via MCP (prefer over Python scripts for browser tasks):
 - **Playwright browser automation** — use the `playwright` MCP for web navigation, clicking, form-filling, screenshots. No credentials needed. Note: the SSO refresh scripts (`playwright_sso.py` and per-tool `sso.py`) still run via the CLI wrappers — they capture session tokens and write them to `.env` / `~/.browser_automation/`. Use the MCP for general browser automation tasks only.
@@ -19,8 +19,9 @@ Connections available via MCP (prefer over Python scripts for browser tasks):
 MCP connections (see `tool_connections/mcp-eda-data-stack.md` for Snowflake/dbt reconciliation):
 - **Atlan** — remote SSO MCP for catalog, lineage, metadata; setup in `tool_connections/atlan/setup.md`
 - **Sigma MCP** — remote OAuth MCP for BI queries; setup in `tool_connections/sigma/setup.md`
-- **Snowflake** — keep `personal/snowflake/cli.py` (PAT via `~/.snowflake/config.toml`); Snowflake-managed MCP blocked on ED&A platform — see `tool_connections/snowflake/mcp.md`
+- **Snowflake MCP** — prefer for agent SQL (ED&A stdio MCP + `~/.env.mcp.snowflake`); CLI as supplement — see `tool_connections/mcp-eda-data-stack.md`. Snowflake-managed OAuth MCP still blocked on ED&A platform — `tool_connections/snowflake/mcp.md`
 - **dbt Cloud MCP** — deferred until access is provisioned — see `tool_connections/mcp-eda-data-stack.md`
+- **Atlassian (BT Jira Cloud)** — official remote OAuth 2.1 MCP (`atlassian-bt`) for Jira issues on `workdaybt.atlassian.net`; setup in `tool_connections/atlassian-bt/setup.md`. Confluence on the same site still goes through `confluence-mcp-bt` (Claude Code global config, not this repo).
 
 Connections still blocked (no CLI or MCP yet): **Outlook, GitHub.com**.
 

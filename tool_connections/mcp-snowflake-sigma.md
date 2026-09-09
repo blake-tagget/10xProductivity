@@ -54,6 +54,12 @@ Single reference for the analyst-community request to use Snowflake and Sigma MC
 3. **Watch ISSAS-1780** for Sigma final security sign-off before treating as org-blessed for broad rollout
 4. **Watch awesome/mcp** for official registry entries when published
 
-## Interim data access (no MCP)
+## Snowflake query routing
 
-Snowflake queries today: `personal/snowflake/cli.py` or collab `radds.snowflake_utils` — see `tool_connections/snowflake/setup.md`.
+| Context | Path |
+|---------|------|
+| Agent SQL in Cursor | **Snowflake MCP** (preferred — avoids PAT lockout from CLI loops) |
+| CLI-only APIs / manual scripts | `personal/snowflake/cli.py` — see `tool_connections/snowflake/setup.md` |
+| EDDG / notebooks | collab `radds.snowflake_utils` |
+
+Detail: `tool_connections/mcp-eda-data-stack.md`

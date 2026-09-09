@@ -53,6 +53,14 @@
    # → {"U": "you@company.com", "WH": "your_warehouse", "ROLE": "...", "account": "..."}
    ```
 
+## MCP vs CLI — when to use which
+
+**Agents in Cursor:** prefer **Snowflake MCP** for SQL, schema browse, and sampling. Repeated `cli.py query` calls in one agent session can trigger account lockouts; MCP manages the connection with less churn.
+
+**CLI:** keep it for manual one-offs, APIs the MCP doesn't expose, and EDDG/collab container workflows. The CLI has a broader API surface; MCP covers most agent needs.
+
+See `tool_connections/mcp-eda-data-stack.md` for setup paths and routing.
+
 ## Using the CLI
 
 After setup, run queries from `personal/snowflake/`:

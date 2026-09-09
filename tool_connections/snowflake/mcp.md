@@ -11,7 +11,7 @@ description: Snowflake managed MCP server — setup status, security gates, and 
 
 Reference for standing up the **Snowflake-managed MCP server** in Cursor. Distinct from the existing PAT/CLI workflow documented in `connection-pat.md` and `setup.md`.
 
-> **Reconciliation:** ED&A also documents a separate stdio Snowflake MCP (PAT via `~/.env.mcp.snowflake`). 10x keeps the PAT CLI as default until a different approach adds clear value. See `tool_connections/mcp-eda-data-stack.md`.
+> **Reconciliation:** ED&A stdio Snowflake MCP (PAT via `~/.env.mcp.snowflake`) is the **agent default** for SQL — prefer it over CLI loops (lockout risk). PAT CLI remains for APIs MCP doesn't cover. See `tool_connections/mcp-eda-data-stack.md`.
 
 ## Status (2026-07-27)
 
@@ -106,15 +106,15 @@ DESCRIBE MCP SERVER <name>;
 
 With Cursor connected: ask the agent to list Snowflake MCP tools, then run a trivial read-only query against a certified table.
 
-## Interim: no MCP
+## Until managed MCP (C) exists
 
-Until the shared server exists, use existing paths:
+The **shared Snowflake-managed server** (OAuth, section above) is still blocked. For agent SQL today, use the **ED&A stdio Snowflake MCP** (see `tool_connections/mcp-eda-data-stack.md`) — not CLI loops.
 
 | Path | When |
 |------|------|
-| `python3 personal/snowflake/cli.py query --sql "..."` | Local 10x venv |
+| Snowflake MCP (stdio, ED&A pack) | Agent SQL in Cursor — **default** |
+| `python3 personal/snowflake/cli.py query --sql "..."` | CLI-only APIs, manual one-offs — avoid many calls per agent session |
 | `radds.snowflake_utils` in collab container | EDDG / notebook workflows |
-| Context Atlas routing | `~/code/context-atlas/docs/atlas/ROUTING.md` — Snowflake has no MCP today |
 
 Common schemas: `CERTIFIED_PROD.GTM`, `BASE_PROD.SALESFORCE`, `CERTIFIED_PROD.COMMON`.
 

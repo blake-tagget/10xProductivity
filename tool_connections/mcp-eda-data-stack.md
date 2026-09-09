@@ -8,7 +8,7 @@ description: Reconcile ED&A MCP setup guidance (Atlan, Snowflake, dbt) with 10xP
 
 ED&A publishes a three-server MCP profile for Cursor: **Atlan**, **Snowflake**, and **dbt Cloud**. This doc maps that guidance onto 10xProductivity — what we use today, what we defer, and what would need to change to adopt an alternative.
 
-**Decision principle:** keep what works. Switch connection approaches only when the new path adds clear value over the cost of migration and duplicate credential management.
+**Decision principle:** use the right surface for the job. For agent-driven Snowflake work, prefer MCP over CLI scripts — repeated CLI connections from agent loops can trigger account lockouts; MCP carries that risk with less effort.
 
 ---
 
@@ -17,7 +17,7 @@ ED&A publishes a three-server MCP profile for Cursor: **Atlan**, **Snowflake**, 
 | Tool | ED&A MCP guide | 10x position | Action |
 |------|----------------|--------------|--------|
 | **Atlan** | Remote MCP + SSO | **Adopt MCP** | `tool_connections/atlan/setup.md` |
-| **Snowflake** | Stdio MCP + `~/.env.mcp.snowflake` (PAT) | **Keep PAT CLI** (`~/.snowflake/config.toml`) | No change unless value is clear |
+| **Snowflake** | Stdio MCP + `~/.env.mcp.snowflake` (PAT) | **MCP for agents, CLI as supplement** | MCP default in Cursor; CLI when MCP lacks an API |
 | **dbt Cloud** | Stdio MCP + `~/.env.mcp.dbt` + `dbt_cloud.yml` | **Defer** — no access yet | Revisit when provisioned |
 
 ---
@@ -28,47 +28,60 @@ ED&A publishes a three-server MCP profile for Cursor: **Atlan**, **Snowflake**, 
 
 **Setup:** `tool_connections/atlan/setup.md`
 
-**Pairing:** Use Atlan for *what exists and how it connects*; use Snowflake CLI for *what's in the rows*.
+**Pairing:** Use Atlan for *what exists and how it connects*; use **Snowflake MCP** for agent SQL and sampling; use CLI only when MCP lacks the API you need.
 
 ---
 
-## Snowflake — three approaches, one default
+## Snowflake — MCP + CLI (use both, prefer MCP for agents)
 
-Three different "Snowflake + agent" patterns appear across ED&A docs and 10x. They are **not interchangeable** — each solves a different integration shape.
+Three different "Snowflake + agent" patterns appear across ED&A docs and 10x. They are **not interchangeable** — each solves a different integration shape. In practice you use **two**: MCP for agent work, CLI for gaps.
 
-### A. PAT CLI via `~/.snowflake/config.toml` ← **10x default (keep)**
+### Why prefer MCP for agent queries
+
+Agents that drive the Snowflake CLI in a loop (many `cli.py query` calls in one session) can open repeated connections under your PAT. That pattern has triggered **account lockouts** in practice. Snowflake MCP keeps the session managed by the MCP server — less connection churn, less lockout risk, and easier to reason about for multi-step agent tasks.
+
+**Rule of thumb:**
+
+| Who is querying | Prefer |
+|-----------------|--------|
+| Cursor / Claude agent (multi-step, exploratory) | **Snowflake MCP** |
+| You, manually, one-off | CLI or MCP — either is fine |
+| Script needing an API MCP doesn't expose | **CLI** |
+| EDDG / collab container (`radds.snowflake_utils`) | Existing container path |
+
+The CLI still has **more APIs** (extra introspection helpers, batch scripting). Keep it installed — just don't default agents to shell out to it for routine SQL.
+
+### A. PAT CLI via `~/.snowflake/config.toml` — supplement
 
 | | |
 |---|---|
 | **How** | `personal/snowflake/cli.py` reads `config.toml` internally; credentials never enter agent context |
 | **Credential home** | `~/.snowflake/config.toml` (Snowflake VSCode extension) |
 | **Status** | Working — `cli.py check` returns user, role, warehouse |
-| **Best for** | Ad-hoc SQL, schema exploration, scripts, EDDG/collab workflows |
+| **Best for** | APIs MCP doesn't cover, local scripts, EDDG/collab workflows, manual one-offs |
 
-**Why keep it:** single credential source, token-safe CLI already in `CLAUDE.md`, no MCP reload/auth dance, no duplicate env files.
+**Caution for agents:** avoid chaining many CLI queries in one agent turn. Prefer MCP for that workload.
 
-### B. ED&A stdio Snowflake MCP + `~/.env.mcp.snowflake`
+### B. ED&A stdio Snowflake MCP + `~/.env.mcp.snowflake` ← **agent default**
 
 | | |
 |---|---|
 | **How** | Cursor launches a stdio MCP server; server loads PAT from `~/.env.mcp.snowflake` |
-| **Credential home** | `~/.env.mcp.snowflake` (`chmod 600`) — separate from `config.toml` |
+| **Credential home** | `~/.env.mcp.snowflake` (`chmod 600`) — can be synced from `config.toml` |
 | **Auth vars** | `SNOWFLAKE_AUTHENTICATOR=PROGRAMMATIC_ACCESS_TOKEN`, `SNOWFLAKE_TOKEN`, role, warehouse, database, schema |
 | **Config source** | Org pack `eda-agent-skills` → `plugins/dataops-engineer/mcp.json` |
-| **Best for** | Agents that must use MCP tools only (no shell/CLI); org-standard Cursor profiles |
+| **Best for** | Agent SQL, schema browse, row sampling — default path in Cursor |
 
 **Tradeoffs vs CLI:**
 
 | Factor | CLI (A) | MCP (B) |
 |--------|---------|---------|
-| Credential copies | One (`config.toml`) | Two (`config.toml` + `env.mcp.snowflake`) unless scripted |
+| Agent multi-query safety | Higher lockout risk | Lower — managed session |
+| API surface | Broader | Covers most agent needs |
 | Agent integration | Shell subprocess | Native MCP tools in Cursor |
-| Token in chat risk | Low (CLI never echoes) | Low (if env file, not inline in `mcp.json`) |
-| Org alignment | Personal 10x pattern | ED&A pack pattern |
+| Credential copies | One (`config.toml`) | Two unless synced from `config.toml` |
 
-**When to reconsider B:** ED&A mandates MCP-only agents, the pack ships a maintained server with tools you need (e.g. Cortex helpers), or you want Snowflake in the same MCP tool surface as Atlan without shell access.
-
-**If you adopt B later:** generate `~/.env.mcp.snowflake` from `config.toml` (don't hand-maintain a third copy). A `--sync-mcp` flag on `connection.py` would be the natural bridge — not built yet.
+**Credential bridge:** generate `~/.env.mcp.snowflake` from `config.toml` (don't hand-maintain a second PAT). A `--sync-mcp` flag on `connection.py` would be the natural bridge — not built yet.
 
 ### C. Snowflake-managed MCP + OAuth (ISSAS-1780 track)
 
@@ -115,7 +128,8 @@ No dbt Cloud access yet. When provisioned, the ED&A guide expects:
 | Question type | Tool |
 |---------------|------|
 | "What tables exist / what's certified / lineage?" | **Atlan MCP** |
-| "Run this SQL / sample rows / list schemas" | **Snowflake CLI** |
+| "Run this SQL / sample rows / list schemas" | **Snowflake MCP** (not CLI loops) |
+| "Need a CLI-only API / batch script outside Cursor" | **Snowflake CLI** |
 | "Trigger a dbt job / inspect dbt models" | **dbt MCP** (when provisioned) |
 | "BI workbook / Sigma semantic layer" | **Sigma MCP** (`tool_connections/sigma/setup.md`) |
 
@@ -123,9 +137,9 @@ No dbt Cloud access yet. When provisioned, the ED&A guide expects:
 
 ## Open questions for `#ask-eda`
 
-1. Is the stdio PAT MCP (B) the current org recommendation, or is managed MCP (C) still the plan?
+1. Is managed MCP (C) still planned alongside stdio MCP (B), or does one supersede the other?
 2. Where is `eda-agent-skills` `plugins/dataops-engineer/mcp.json` published for analysts who don't have the pack cloned?
-3. Does the stdio Snowflake MCP add capabilities beyond what CLI + Atlan already cover?
+3. Does the stdio Snowflake MCP expose connection-pooling or rate limits that formally address PAT lockout risk?
 
 ---
 

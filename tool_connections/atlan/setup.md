@@ -10,7 +10,7 @@ description: Atlan hosted MCP — catalog search, lineage, and metadata in Curso
 
 Atlan provides a **hosted remote MCP** (HTTP + SSO). No API keys, no env files, no tokens in `mcp.json`.
 
-Use it for **catalog metadata** — finding assets, lineage, glossary terms, certifications, and descriptions. It does not replace Snowflake SQL access; pair it with `personal/snowflake/cli.py` when you need to read actual row data.
+Use it for **catalog metadata** — finding assets, lineage, glossary terms, certifications, and descriptions. For row-level data, pair with **Snowflake MCP** (preferred for agents) or `personal/snowflake/cli.py` when MCP lacks the API you need.
 
 ## Status
 
