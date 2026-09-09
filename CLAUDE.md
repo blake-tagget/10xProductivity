@@ -21,7 +21,7 @@ MCP connections (see `tool_connections/mcp-eda-data-stack.md` for Snowflake/dbt 
 - **Sigma MCP** — remote OAuth MCP for BI queries; setup in `tool_connections/sigma/setup.md`
 - **Snowflake MCP** — prefer for agent SQL (ED&A stdio MCP + `~/.env.mcp.snowflake`); CLI as supplement — see `tool_connections/mcp-eda-data-stack.md`. Snowflake-managed OAuth MCP still blocked on ED&A platform — `tool_connections/snowflake/mcp.md`
 - **dbt Cloud MCP** — deferred until access is provisioned — see `tool_connections/mcp-eda-data-stack.md`
-- **Atlassian (BT Jira Cloud)** — official remote OAuth 2.1 MCP (`atlassian-bt`) for Jira issues on `workdaybt.atlassian.net`; setup in `tool_connections/atlassian-bt/setup.md`. Confluence on the same site still goes through `confluence-mcp-bt` (Claude Code global config, not this repo).
+- **Jira (BT Jira Cloud)** — self-hosted `mcp-atlassian` via `uvx` (`jira-bt`), API-token auth, for Workday BT Jira Cloud issues; setup in `tool_connections/jira-bt/setup.md`. Replaced an earlier attempt at the official OAuth 2.1 remote MCP, which needs an interactive browser flow this repo's non-interactive sessions can't complete. Confluence on the same site still goes through `confluence-mcp-bt` (Claude Code global config, not this repo).
 
 Connections still blocked (no CLI or MCP yet): **Outlook, GitHub.com**.
 
