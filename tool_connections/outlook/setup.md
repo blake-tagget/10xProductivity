@@ -24,7 +24,50 @@ source .venv/bin/activate
 python3 tool_connections/shared_utils/playwright_sso.py --outlook-only
 ```
 
-On a managed machine (Workday/Intune/MDM), Azure AD SSO auto-completes in ~30s. On unmanaged machines, complete the Microsoft 365 login once through the browser.
+If Microsoft asks for an account, pass a login hint:
+
+```bash
+python3 tool_connections/shared_utils/playwright_sso.py \
+  --outlook-only \
+  --login-hint user@example.com
+# → Opens Outlook with login_hint=user%40example.com
+# → Login detected; writes GRAPH_ACCESS_TOKEN + OWA_ACCESS_TOKEN to .env
+```
+
+You can also persist the hint in `.env` as `OUTLOOK_LOGIN_HINT=user@example.com`.
+
+Verified scrubbed output:
+
+```text
+$ python3 tool_connections/shared_utils/playwright_sso.py --outlook-only --force
+SSO token refresher
+  .env: /path/to/10xProductivity/.env
+
+  Refreshing outlook...
+  Opening Outlook (https://outlook.office.com/mail/) with login hint alice@example.com — Azure AD SSO should auto-complete...
+    Waiting for Outlook login to complete (up to 3 min — Ctrl+C to abort)...
+    Still waiting... (163s remaining — Ctrl+C to abort)
+    Login detected!
+    Graph token captured (3215 chars)
+    OWA token captured (5098 chars)
+  Updated /path/to/10xProductivity/.env
+    Updated GRAPH_ACCESS_TOKEN
+    Updated OWA_ACCESS_TOKEN
+
+Done.
+
+$ python3 - <<'PY'  # verify Graph /me and OWA messages with refreshed tokens
+# → graph /me status: 200
+# → graph user present: True
+# → owa messages status: 200
+# → owa messages returned: 1
+```
+
+Failure case: if Microsoft selects the wrong account, the Graph verify call
+returns a different user or `401`. Re-run with `--login-hint user@example.com`
+or set `OUTLOOK_LOGIN_HINT` in `.env` before refreshing.
+
+On a corporate-managed machine (Intune/MDM or similar), Azure AD SSO auto-completes in ~30s. On unmanaged machines, complete the Microsoft 365 login once through the browser.
 
 Two tokens are written to `.env`:
 - `GRAPH_ACCESS_TOKEN` — for Microsoft Graph (`/me`, `/me/people`)
@@ -82,6 +125,7 @@ Token TTL: ~1h. Session TTL: ~24h. **Connection details:** `tool_connections/out
 ```bash
 # --- Outlook / Microsoft 365 (work account) ---
 # Short-lived (~1h) — refresh with: python3 tool_connections/shared_utils/playwright_sso.py --outlook-only
+OUTLOOK_LOGIN_HINT=user@example.com
 GRAPH_ACCESS_TOKEN=your-graph-bearer-token-here
 OWA_ACCESS_TOKEN=your-owa-bearer-token-here
 

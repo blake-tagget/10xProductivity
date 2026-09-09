@@ -7,24 +7,27 @@ Bearer tokens from network requests for Graph API and OWA.
 Standalone usage:
     python3 tool_connections/outlook/sso.py
     python3 tool_connections/outlook/sso.py --force
+    python3 tool_connections/outlook/sso.py --force --login-hint user@example.com
 """
 
 import sys
 import time
+import urllib.parse
 
 try:
-    from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
+    from playwright.sync_api import sync_playwright
 except ImportError:
     import os
     os.system(f"{sys.executable} -m pip install playwright -q")
     os.system(f"{sys.executable} -m playwright install chromium -q")
-    from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
+    from playwright.sync_api import sync_playwright
 
 import ssl
 import urllib.request
 
 TOOL_NAME = "outlook"
 ENV_KEYS = ["GRAPH_ACCESS_TOKEN", "OWA_ACCESS_TOKEN"]
+ACCOUNT_ENV_KEYS = ["OUTLOOK_LOGIN_HINT"]
 OUTLOOK_URL = "https://outlook.office.com/mail/"
 
 
@@ -59,6 +62,54 @@ def capture(env: dict) -> dict:
         return isinstance(t, str) and t.count(".") in (2, 4) and len(t) > 100
 
     captured: dict[str, str] = {}
+    login_hint = (
+        env.get("SSO_LOGIN_HINT")
+        or env.get("OUTLOOK_LOGIN_HINT")
+        or env.get("WORK_EMAIL")
+        or env.get("M365_EMAIL")
+        or env.get("AZURE_EMAIL")
+        or ""
+    ).strip()
+
+    def _url_with_login_hint(url: str) -> str:
+        if not login_hint:
+            return url
+        parsed = urllib.parse.urlsplit(url)
+        query = dict(urllib.parse.parse_qsl(parsed.query, keep_blank_values=True))
+        query.setdefault("login_hint", login_hint)
+        return urllib.parse.urlunsplit(
+            (parsed.scheme, parsed.netloc, parsed.path, urllib.parse.urlencode(query), parsed.fragment)
+        )
+
+    def _try_fill_login_hint(page) -> None:
+        if not login_hint:
+            return
+        selectors = [
+            'input[type="email"]',
+            'input[name="loginfmt"]',
+            'input#i0116',
+        ]
+        for selector in selectors:
+            try:
+                locator = page.locator(selector).first
+                if locator.count() == 0:
+                    continue
+                locator.wait_for(state="visible", timeout=500)
+                locator.fill(login_hint, timeout=1000)
+                print(f"    Pre-filled login hint: {login_hint}", flush=True)
+                for button_selector in ['input[type="submit"]', 'button[type="submit"]', 'input#idSIButton9']:
+                    try:
+                        button = page.locator(button_selector).first
+                        if not button.count():
+                            continue
+                        button.wait_for(state="visible", timeout=500)
+                        button.click(timeout=1000)
+                        return
+                    except Exception:
+                        continue
+                return
+            except Exception:
+                continue
 
     def _on_request(req):
         auth = req.headers.get("authorization", "")
@@ -72,7 +123,9 @@ def capture(env: dict) -> dict:
         elif "outlook.office.com" in req.url and "owa" not in captured:
             captured["owa"] = t
 
-    print(f"  Opening Outlook ({OUTLOOK_URL}) — Azure AD SSO should auto-complete...")
+    target_url = _url_with_login_hint(OUTLOOK_URL)
+    hint_msg = f" with login hint {login_hint}" if login_hint else ""
+    print(f"  Opening Outlook ({OUTLOOK_URL}){hint_msg} — Azure AD SSO should auto-complete...")
     with sync_playwright() as p:
         browser = p.chromium.launch(
             headless=False,
@@ -81,7 +134,7 @@ def capture(env: dict) -> dict:
         ctx = browser.new_context(ignore_https_errors=True)
         page = ctx.new_page()
         page.on("request", _on_request)
-        page.goto(OUTLOOK_URL, wait_until="commit", timeout=30_000)
+        page.goto(target_url, wait_until="commit", timeout=30_000)
         print("    Waiting for Outlook login to complete (up to 3 min — Ctrl+C to abort)...", flush=True)
 
         deadline = time.time() + 180
@@ -91,6 +144,7 @@ def capture(env: dict) -> dict:
                 if "graph" in captured and "owa" in captured:
                     print("    Login detected!", flush=True)
                     break
+                _try_fill_login_hint(page)
                 time.sleep(1)
                 if time.time() >= next_heartbeat:
                     remaining = max(0, int(deadline - time.time()))
@@ -129,7 +183,10 @@ if __name__ == "__main__":
     import argparse
     from pathlib import Path
 
-    ENV_FILE = Path(__file__).parents[2] / ".env"
+    sys.path.insert(0, str(Path(__file__).parents[2] / "tool_connections"))
+    from shared_utils.browser import DEFAULT_ENV_FILE
+
+    ENV_FILE = DEFAULT_ENV_FILE
 
     def _load_env():
         if not ENV_FILE.exists():
@@ -139,6 +196,7 @@ if __name__ == "__main__":
 
     def _write_env(tokens):
         import re
+        ENV_FILE.parent.mkdir(parents=True, exist_ok=True)
         content = ENV_FILE.read_text() if ENV_FILE.exists() else ""
         for key, value in tokens.items():
             new_line = f"{key}={value}"
@@ -154,9 +212,12 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--force", action="store_true")
+    parser.add_argument("--login-hint", help="Email/account hint to pre-fill when Microsoft asks for an account.")
     args = parser.parse_args()
 
     env = _load_env()
+    if args.login_hint:
+        env["SSO_LOGIN_HINT"] = args.login_hint
     if not args.force and check(env):
         print("GRAPH_ACCESS_TOKEN: ok — nothing to do. Use --force to refresh.")
         sys.exit(0)
