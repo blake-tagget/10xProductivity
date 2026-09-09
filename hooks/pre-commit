@@ -10,7 +10,10 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null || echo "$SCRIPT_DIR/..")"
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+if [[ -z "$REPO_ROOT" ]]; then
+    REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+fi
 TENX_PRIVATE_DIR="${TENX_PRIVATE_DIR:-$HOME/.10xProductivity}"
 ENV_FILE="$TENX_PRIVATE_DIR/.env"
 if [[ ! -f "$ENV_FILE" && -f "$REPO_ROOT/.env" ]]; then
