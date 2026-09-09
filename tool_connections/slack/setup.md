@@ -31,6 +31,20 @@ python3 tool_connections/shared_utils/playwright_sso.py --slack-only
 
 The script opens a Chromium window. On managed machines with enterprise SSO it completes automatically (~20s). On personal machines, the user logs in once through the browser. Tokens are written to `.env` automatically.
 
+For multiple Slack workspaces, use account-scoped keys. The account name is
+normalized to an uppercase `.env` prefix:
+
+```bash
+# .env
+SLACK_ACME_WORKSPACE_URL=https://acme.slack.com/
+
+source .venv/bin/activate
+python3 tool_connections/shared_utils/playwright_sso.py --slack-only --account acme
+```
+
+That writes `SLACK_ACME_XOXC` and `SLACK_ACME_D_COOKIE` without replacing the
+default `SLACK_XOXC` / `SLACK_D_COOKIE` pair.
+
 ---
 
 ## Verify
@@ -57,8 +71,13 @@ print(r.get("user"), r.get("team"))
 # --- Slack ---
 # Short-lived (~8h) — refresh with: python3 tool_connections/shared_utils/playwright_sso.py --slack-only
 SLACK_WORKSPACE_URL=https://yourcompany.slack.com/
-SLACK_XOXC=xoxc-your-slack-client-token
-SLACK_D_COOKIE=xoxd-your-slack-d-cookie-value
+SLACK_XOXC=your-slack-client-token
+SLACK_D_COOKIE=your-slack-d-cookie-value
+
+# Optional second workspace:
+SLACK_ACME_WORKSPACE_URL=https://acme.slack.com/
+SLACK_ACME_XOXC=your-acme-client-token
+SLACK_ACME_D_COOKIE=your-acme-d-cookie-value
 ```
 
 ---
@@ -68,6 +87,35 @@ SLACK_D_COOKIE=xoxd-your-slack-d-cookie-value
 ```bash
 source .venv/bin/activate
 python3 tool_connections/shared_utils/playwright_sso.py --slack-only
+
+# Refresh a named workspace/account:
+python3 tool_connections/shared_utils/playwright_sso.py --slack-only --account acme
 ```
 
 Token TTL: ~8h. Re-run when `auth.test` returns `ok=False`.
+
+## Verified multi-workspace setup
+
+The default and account-scoped flows were both tested with real Slack sessions
+and scrubbed output:
+
+```text
+$ python3 tool_connections/shared_utils/playwright_sso.py --slack-only
+# → slack: ok
+# → auth.test: ok=True, team=primary-workspace, user=alice
+# → conversations.open: ok=True, channel=D0123456789
+# → chat.postMessage: ok=True
+
+$ python3 tool_connections/shared_utils/playwright_sso.py --slack-only --account sideproject
+# → slack:sideproject: ok
+# → auth.test: ok=True, team=sideproject-workspace, user=alice
+# → conversations.open: ok=True, channel=D9876543210
+# → chat.postMessage: ok=True
+```
+
+Failure case: private workspaces that use Google sign-in may show `This browser
+or app may not be secure` in Playwright-controlled Chromium. If the scoped
+`SLACK_<ACCOUNT>_XOXC` and `SLACK_<ACCOUNT>_D_COOKIE` values are still valid,
+the refresher validates them and skips browser login. If they are expired, log
+in through the opened browser manually or refresh from an already trusted
+browser session.

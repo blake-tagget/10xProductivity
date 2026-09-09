@@ -11,7 +11,11 @@ env_vars:
 
 Access is via your own user session (`xoxc` client token) extracted after SSO — no Slack app installation or admin approval needed.
 
-Env: `SLACK_XOXC`, `SLACK_D_COOKIE` (~8h — refresh via `python3 tool_connections/shared_utils/playwright_sso.py --slack-only`)
+Env: `SLACK_XOXC`, `SLACK_D_COOKIE` (long-lived user session; refresh via `python3 tool_connections/shared_utils/playwright_sso.py --slack-only` only when the session stops working)
+
+Multiple Slack workspaces are supported with account-scoped env keys:
+`SLACK_ACME_WORKSPACE_URL`, `SLACK_ACME_XOXC`, `SLACK_ACME_D_COOKIE`
+(refresh via `python3 tool_connections/shared_utils/playwright_sso.py --slack-only --account acme`).
 
 ---
 
@@ -44,6 +48,43 @@ python3 tool_connections/shared_utils/playwright_sso.py --slack-only
 
 The script opens Chromium, completes SSO, and writes `SLACK_XOXC` and `SLACK_D_COOKIE` to `.env` automatically.
 
+For a second workspace, set a scoped URL and refresh with `--account`:
+
+```bash
+# .env
+SLACK_ACME_WORKSPACE_URL=https://acme.slack.com/
+
+source .venv/bin/activate
+python3 tool_connections/shared_utils/playwright_sso.py --slack-only --account acme
+```
+
+The account name becomes an uppercase prefix, so this writes
+`SLACK_ACME_XOXC` and `SLACK_ACME_D_COOKIE`.
+
+## Verified multi-workspace flow
+
+The account-scoped flow was verified against two Slack workspaces:
+
+```text
+$ python3 tool_connections/shared_utils/playwright_sso.py --slack-only
+# → slack: ok
+# → auth.test: ok=True, team=primary-workspace, user=alice
+# → conversations.open: ok=True, channel=D0123456789
+# → chat.postMessage: ok=True
+
+$ python3 tool_connections/shared_utils/playwright_sso.py --slack-only --account sideproject
+# → slack:sideproject: ok
+# → auth.test: ok=True, team=sideproject-workspace, user=alice
+# → conversations.open: ok=True, channel=D9876543210
+# → chat.postMessage: ok=True
+```
+
+Observed failure case: Google sign-in for a private personal workspace can show
+`This browser or app may not be secure` in Playwright-controlled Chromium. If a
+valid scoped token already exists, `check()` now validates `xoxc` together with
+the `d` cookie and skips browser login. If no valid token exists, log in through
+the opened browser manually or capture from an already trusted browser session.
+
 ---
 
 ## Choosing the right method
@@ -66,7 +107,7 @@ The script opens Chromium, completes SSO, and writes `SLACK_XOXC` and `SLACK_D_C
 
 **Requires:** Slack Business+ or Enterprise+ plan (not available on Free/Pro as of Jan 2026)
 
-**Pattern:** Post question to Slackbot DM → poll `conversations.replies` for response with `subtype='ai'`
+**Pattern:** Post question to Slackbot DM → poll `conversations.replies` for response with `subtype='ai'` or `subtype='ai_complete'`
 
 **⚠ Key gotcha:** Response arrives in ~0.2s — poll immediately with 1s sleep, not with long delay
 
@@ -107,7 +148,8 @@ for _ in range(60):
     time.sleep(1)
     r = api("GET", "conversations.replies", params={"channel": slackbot_dm, "ts": msg_ts, "limit": "20"})
     ai_replies = [m for m in r.get("messages", [])
-                  if float(m.get("ts", "0")) > float(msg_ts) and m.get("subtype") == "ai"]
+                  if float(m.get("ts", "0")) > float(msg_ts)
+                  and m.get("subtype") in {"ai", "ai_complete"}]
     if ai_replies:
         # Parse blocks to extract answer (you can access msg["blocks"] for rich text, or msg["text"] for plain)
         print(ai_replies[-1])
@@ -144,6 +186,32 @@ for m in matches:
 
 ---
 
+## Resolve a user before DM/upload
+
+`users.lookupByEmail` can return `not_allowed_token_type` for the xoxc session token. When that happens, recover the user ID from Slack search, then verify it with `users.info` before opening a DM.
+
+```python
+# First try lookupByEmail if available.
+r = api("GET", "users.lookupByEmail", params={"email": "person@example.com"})
+# → {"ok": false, "error": "not_allowed_token_type"}  # common for xoxc sessions
+if r.get("ok"):
+    user_id = r["user"]["id"]
+else:
+    # Fallback: search mentions and extract the <@ID|handle> value from results.
+    sr = api("GET", "search.messages",
+             params={"query": '"Person Name" OR "person.handle"', "count": "10"})
+    # → {"ok": true, "messages": {"matches": [{"text": "...<@U0123456789|person.handle>..."}]}}
+    user_id = "U0123456789"  # Example from a result like <@U0123456789|person.handle>
+
+info = api("GET", "users.info", params={"user": user_id})
+# → {"ok": true, "user": {"id": "U0123456789", ...}}
+assert info.get("ok"), info
+dm = api("POST", "conversations.open", {"users": user_id})
+# → {"ok": true, "channel": {"id": "D0123456789", ...}}
+```
+
+---
+
 ## Read thread from URL
 
 ```python
@@ -170,6 +238,7 @@ messages = r.get("messages", [])
 | `conversations.replies` | Fetch thread / poll for Slack AI | `channel`, `ts` (thread root), `limit` |
 | `conversations.history` | Read recent channel messages | `channel`, `limit` |
 | `search.messages` | Full-text search with date filters | `query`, `count`, `sort` |
+| `users.lookupByEmail` | Look up user by email when token permits | `email` |
 | `users.info` | Look up user by ID | `user` |
 
 ---
