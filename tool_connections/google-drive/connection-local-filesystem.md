@@ -11,7 +11,7 @@ auth_file: ~/.browser_automation/gdrive_auth.json
 No OAuth2 app or admin approval needed. Two layers:
 
 1. **Google Drive for Desktop** — mounts your Drive at `~/Library/CloudStorage/GoogleDrive-<email>/`. No auth, no tokens, instant file access.
-2. **Playwright daemon** (`gdrive_server.py`) — keeps one browser open persistently. All online operations (read content, search cloud-only files) route through it. SSO happens once; no repeated auth prompts.
+2. **Playwright daemon** (`gdrive_server.py`) — opens one visible Test Chrome for online operations (read content, search cloud-only files). Normal CLI/context-manager usage stops it when done; pass `--keep-open` or `GDrive(keep_open=True)` when you want to reuse the browser for batch work.
 
 **Write support:** Not available. Google Docs and Slides have no write path without OAuth2. Sheets keyboard-navigation write exists but is too fragile for production use.
 
@@ -23,6 +23,7 @@ No OAuth2 app or admin approval needed. Two layers:
 import sys
 sys.path.insert(0, "tool_connections/google-drive")
 from google_drive import GDriveLocal
+from google_drive import GDrive
 
 local = GDriveLocal()
 
@@ -42,7 +43,7 @@ results = local.search("sprint capacity")
 # Smart search: local Spotlight → cache → online (covers "Shared with me" too)
 results = local.smart_search("AI projects")
 # → first call: [smart_search] Not found locally — searching online for 'AI projects'...
-# →   20 results returned, stubs written to personal/tool_connections/google-drive/bridge_cache/
+# →   20 results returned, stubs written to TENX_PRIVATE_DIR/personal/tool_connections/google-drive/bridge_cache/
 # → subsequent calls: instant from cache (source: "cache")
 
 # Get file ID from a .gdoc/.gsheet stub
@@ -56,7 +57,7 @@ content = local.read_file("My Drive/notes.txt")
 
 # Read Google Docs/Sheets/Slides content
 content = local.drive.read(file_id, "document")
-# → "The Enterprise AI Transformation\nWorkday's product vision and strategy..."
+# → "The Enterprise AI Transformation\nOur product vision and strategy..."
 csv     = local.drive.read(file_id, "spreadsheet")
 # → "Name,Status,Owner\nAIOps,In Progress,alice@example.com\n..."
 notes   = local.drive.read(file_id, "presentation")
@@ -65,6 +66,19 @@ notes   = local.drive.read(file_id, "presentation")
 # Search online (covers all of Drive including Shared with me)
 results = local.drive.search("project proposal")
 results = local.drive.search("owner:me budget")     # files you own
+local.close()  # stop the visible Test Chrome when done
+
+# For standalone one-shot reads, use a context manager; it stops Chrome on exit.
+with GDrive() as drive:
+    content = drive.read(file_id, "document")
+# → "The Enterprise AI Transformation\nOur product vision and strategy..."
+
+# For batch work, opt in to keeping the browser open, then close it explicitly.
+drive = GDrive(keep_open=True)
+content = drive.read(file_id, "document")
+other = drive.read(other_file_id, "document")
+drive.close()
+# → both reads return text, then the visible Test Chrome closes after drive.close()
 ```
 
 ---
@@ -100,7 +114,7 @@ Pass it to `local.drive.read(doc_id, "document")` to export content as plain tex
 
 ## Bridge cache
 
-`smart_search()` caches online results to `personal/tool_connections/google-drive/bridge_cache/` (gitignored — lives in `personal/` with all other user-specific data) as `.gdrive.json` files. Subsequent searches for the same query return instantly without hitting the network.
+`smart_search()` caches online results to `TENX_PRIVATE_DIR/personal/tool_connections/google-drive/bridge_cache/` as `.gdrive.json` files. The default `TENX_PRIVATE_DIR` is `~/.10xProductivity`, keeping searched file IDs and other user-specific data outside this repo. Subsequent searches for the same query return instantly without hitting the network.
 
 ```json
 {
@@ -126,7 +140,9 @@ nohup .venv/bin/python3 tool_connections/google-drive/gdrive_server.py start > /
 python3 tool_connections/google-drive/gdrive_server.py stop
 ```
 
-The daemon keeps one browser window open — minimize it, don't close it.
+The daemon keeps one browser window open only while it is running. One-shot CLI
+commands and `with GDrive()` stop it automatically; long batch workflows can use
+`--keep-open` / `GDrive(keep_open=True)` and then stop it with the command above.
 Log: `~/.browser_automation/gdrive_server.log`
 
 ---
@@ -152,4 +168,4 @@ nohup .venv/bin/python3 tool_connections/google-drive/gdrive_server.py start > /
 
 ---
 
-**Verified:** 2026-04-01, macOS 15, Google Workspace account, Google Drive for Desktop 1.91. Tested: `list_folder("My Drive")` (20+ files), `search("AI strategy")` (instant via Spotlight), `smart_search("workday AI strategy")` (20 results via daemon), `read(file_id, "document")` (full doc text returned), `read(file_id, "spreadsheet")` (CSV returned). Daemon start-to-ready ~10s. Auth lifetime ~7 days observed. Session expired error confirmed when `gdrive_auth.json` stale — resolved by re-running `sso.py --force`.
+**Verified:** 2026-04-01, macOS 15, Google Workspace account, Google Drive for Desktop 1.91. Tested: `list_folder("My Drive")` (20+ files), `search("AI strategy")` (instant via Spotlight), `smart_search("enterprise AI strategy")` (20 results via daemon), `read(file_id, "document")` (full doc text returned), `read(file_id, "spreadsheet")` (CSV returned). Daemon start-to-ready ~10s. Auth lifetime ~7 days observed. Session expired error confirmed when `gdrive_auth.json` stale — resolved by re-running `sso.py --force`.

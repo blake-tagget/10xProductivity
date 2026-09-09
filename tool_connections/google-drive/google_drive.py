@@ -54,14 +54,18 @@ Notes:
       faster than headless for Drive (hardware-accelerated JS rendering)
     - data-id in Drive DOM is truncated; full 44-char IDs come from href
     - read() uses browser download interception (temp path, NOT ~/Downloads)
-    - Bridge cache lives in tool_connections/google-drive/bridge_cache/ (gitignored)
+    - Bridge cache lives in TENX_PRIVATE_DIR/personal/tool_connections/google-drive/bridge_cache/
 """
 
 import json, re, time
+import os
 from pathlib import Path
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
 AUTH_FILE = Path.home() / ".browser_automation" / "gdrive_auth.json"
+TENX_PRIVATE_DIR = Path(
+    os.environ.get("TENX_PRIVATE_DIR", Path.home() / ".10xProductivity")
+).expanduser()
 
 _STUB_EXTENSIONS = {".gdoc", ".gsheet", ".gslides", ".gform", ".gdraw", ".gmap", ".gsite"}
 # Bridge cache files use .gdrive.json (Drive for Desktop drops writes to _STUB_EXTENSIONS)
@@ -301,13 +305,11 @@ class GDriveLocal:
 
     # ── Bridge cache ──────────────────────────────────────────────────────────
 
-    # Cache lives in personal/tool_connections/google-drive/bridge_cache/ —
-    # user-specific data (searched file IDs) that must stay gitignored.
-    # Resolved by walking up from this file to the repo root, then into personal/.
+    # Cache lives under TENX_PRIVATE_DIR because searched file IDs are
+    # user-specific runtime data and must stay outside the public repo.
     @property
     def _bridge_cache_dir(self) -> Path:
-        repo_root = Path(__file__).parent.parent.parent  # tool_connections/google-drive → repo root
-        cache_dir = repo_root / "personal" / "tool_connections" / "google-drive" / "bridge_cache"
+        cache_dir = TENX_PRIVATE_DIR / "personal" / "tool_connections" / "google-drive" / "bridge_cache"
         cache_dir.mkdir(parents=True, exist_ok=True)
         return cache_dir
 
@@ -316,9 +318,8 @@ class GDriveLocal:
         """
         Write a bridge cache entry to bridge_cache/.
 
-        This is inside the repo so the agent can write to it without sandbox
-        restrictions. smart_search() checks this cache before going online,
-        so repeated searches for the same file are instant.
+        smart_search() checks this private cache before going online, so
+        repeated searches for the same file are instant.
 
         name:      display name of the file
         file_id:   Google Drive file ID (44-char string)
@@ -526,12 +527,12 @@ def _parse_raw(raw: list[dict]) -> list[dict]:
 
 class GDrive:
     """
-    Playwright-based Google Drive — routes all browser operations through a
-    persistent background daemon (gdrive_server.py) so the browser stays open
-    across Python process invocations. No repeated SSO auth.
+    Playwright-based Google Drive — routes browser operations through a shared
+    background daemon (gdrive_server.py). Context-manager usage stops the daemon
+    on exit by default so the visible Test Chrome window does not linger.
 
-    The daemon starts automatically on first use and keeps running until
-    explicitly stopped. One browser open = all agent calls reuse it.
+    The daemon starts automatically on first use. Pass keep_open=True when doing
+    several reads/searches and you want to reuse one browser across calls.
 
     Usage:
         # Via GDriveLocal (preferred — handles search + read in one object)
@@ -539,24 +540,41 @@ class GDrive:
         content = local.drive.read(file_id, ftype)
 
         # Standalone
-        drive = GDrive()
-        results = drive.search("AI projects")   # daemon starts if needed
-        content = drive.read(file_id, "document")
+        with GDrive() as drive:
+            results = drive.search("AI projects")
+            content = drive.read(file_id, "document")
+
+        with GDrive(keep_open=True) as drive:
+            content = drive.read(file_id, "document")  # leave daemon running
 
     Daemon management:
         python3 gdrive_server.py status   # check if running
         python3 gdrive_server.py stop     # shut it down
     """
 
-    def __init__(self, auth_file: Path | str | None = None):
+    def __init__(self, auth_file: Path | str | None = None, keep_open: bool = False):
         self._auth_file = Path(auth_file) if auth_file else AUTH_FILE
+        self._keep_open = keep_open
 
     def __enter__(self) -> "GDrive":
         return self
 
     def __exit__(self, *_):
-        # Don't stop the daemon — it should stay running across calls
-        pass
+        if not self._keep_open:
+            self.close()
+
+    def close(self) -> None:
+        """Stop the shared Drive daemon and close its visible Test Chrome."""
+        import gdrive_server
+        gdrive_server.stop()
+
+    def __del__(self) -> None:
+        if self._keep_open:
+            return
+        try:
+            self.close()
+        except Exception:
+            pass
 
     def _is_alive(self) -> bool:
         import gdrive_server
@@ -643,20 +661,25 @@ if __name__ == "__main__":
 
     elif cmd == "search":
         query = " ".join(sys.argv[2:]) or "owner:me"
-        drive = GDrive()
-        results = drive.search(query)
+        keep_open = "--keep-open" in sys.argv[2:]
+        if keep_open:
+            query = " ".join(arg for arg in sys.argv[2:] if arg != "--keep-open") or "owner:me"
+        with GDrive(keep_open=keep_open) as drive:
+            results = drive.search(query)
         print(f"Found {len(results)} results for '{query}':")
         for i, f in enumerate(results, 1):
             print(f"  {i:2}. [{f['type']:<14}] {f['name']}")
 
     elif cmd == "read":
         if len(sys.argv) < 4:
-            print("Usage: python google_drive.py read <file_id> <type>")
+            print("Usage: python google_drive.py read <file_id> <type> [--keep-open]")
             print("  type: document | spreadsheet | presentation")
+            print("  --keep-open: leave the shared browser daemon running for batch reads")
             sys.exit(1)
         file_id, file_type = sys.argv[2], sys.argv[3]
-        drive = GDrive()
-        content = drive.read(file_id, file_type)
+        keep_open = "--keep-open" in sys.argv[4:]
+        with GDrive(keep_open=keep_open) as drive:
+            content = drive.read(file_id, file_type)
         print(content)
 
     else:

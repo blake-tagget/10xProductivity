@@ -27,6 +27,8 @@ import urllib.request
 
 sys.path.insert(0, str(Path(__file__).parents[2] / "tool_connections"))
 from shared_utils.browser import BROWSER_AUTOMATION_DIR
+sys.path.insert(0, str(Path(__file__).parent))
+from gdrive_server import CDP_PORT, DRIVE_URL, _cdp_is_listening, _launch_cdp_chrome
 
 TOOL_NAME = "gdrive"
 ENV_KEYS = ["GDRIVE_COOKIES", "GDRIVE_SAPISID"]
@@ -66,14 +68,15 @@ def capture(env: dict) -> dict:
     storage_state correctly replays the full browser session and is the
     only approach that works.
     """
-    print(f"  Opening Google Drive — Google Workspace SSO (~30s)...")
+    print(f"  Opening Google Drive in system Chrome — Google SSO (~30s)...")
     with sync_playwright() as p:
-        browser = p.chromium.launch(
-            headless=False,
-            args=["--window-size=1200,800", "--window-position=100,100"],
-        )
-        ctx = browser.new_context(ignore_https_errors=True)
-        page = ctx.new_page()
+        # Google rejects Playwright-launched Chromium as insecure. Launch a
+        # separate normal Chrome instance and attach through CDP instead.
+        if not _cdp_is_listening():
+            _launch_cdp_chrome()
+        browser = p.chromium.connect_over_cdp(f"http://127.0.0.1:{CDP_PORT}")
+        ctx = browser.contexts[0]
+        page = ctx.pages[0] if ctx.pages else ctx.new_page()
 
         page.goto(GDRIVE_URL, wait_until="commit", timeout=30_000)
         try:
@@ -129,7 +132,10 @@ def capture(env: dict) -> dict:
 if __name__ == "__main__":
     import argparse
 
-    ENV_FILE = Path(__file__).parents[2] / ".env"
+    sys.path.insert(0, str(Path(__file__).parents[2] / "tool_connections"))
+    from shared_utils.browser import DEFAULT_ENV_FILE
+
+    ENV_FILE = DEFAULT_ENV_FILE
 
     def _load_env():
         if not ENV_FILE.exists():
@@ -139,6 +145,7 @@ if __name__ == "__main__":
 
     def _write_env(tokens):
         import re
+        ENV_FILE.parent.mkdir(parents=True, exist_ok=True)
         content = ENV_FILE.read_text() if ENV_FILE.exists() else ""
         for key, value in tokens.items():
             new_line = f"{key}={value}"
