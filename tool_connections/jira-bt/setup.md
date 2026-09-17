@@ -54,10 +54,13 @@ Ask the agent to fetch a known BT ticket by key — a successful `jira_get_issue
 
 | Connection | Site | Scope | Auth |
 |---|---|---|---|
+| **`conduit`** (`jira_service_desk`) | Workday BT Jira Cloud | **JSM / service desk — use first** | OAuth via Conduit |
 | `jira-ghe` | Internal Server/DC Jira + GHE | SWE/EDDG tickets | token headers (Claude global config) |
 | `confluence-mcp-bt` | Workday BT Confluence Cloud | Confluence pages/spaces only | API token (Claude global config) |
-| `jira-bt` (this one) | Workday BT Jira Cloud | Jira issues only | API token, via `uvx mcp-atlassian` |
+| `jira-bt` (this one) | Workday BT Jira Cloud | Jira **dev** issues (sprints, boards, CRUD) | API token, via `uvx mcp-atlassian` |
 | `ATLASSIAN_BT_*` in `.env` | Workday BT Jira Cloud | Direct REST (curl/scripts) | Same API token — fallback when MCP is down |
+
+**Routing:** Conduit first for JSM requests; this MCP for dev Jira work Conduit does not cover. See `tool_connections/conduit/setup.md`.
 
 If a new API token is ever needed: Atlassian account → Security → API tokens. Update `confluence-mcp-bt`, `jira-bt`, and `ATLASSIAN_BT_TOKEN` together.
 

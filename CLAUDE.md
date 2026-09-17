@@ -16,12 +16,16 @@ Connections with token-safe CLI wrappers (allowed — credential loaded inside s
 Connections available via MCP (prefer over Python scripts for browser tasks):
 - **Playwright browser automation** — use the `playwright` MCP for web navigation, clicking, form-filling, screenshots. No credentials needed. Note: the SSO refresh scripts (`playwright_sso.py` and per-tool `sso.py`) still run via the CLI wrappers — they capture session tokens and write them to `.env` / `~/.browser_automation/`. Use the MCP for general browser automation tasks only.
 
-MCP connections (see `tool_connections/mcp-eda-data-stack.md` for Snowflake/dbt reconciliation):
+MCP connections — **Conduit is the default for SaaS integrations** (`tool_connections/conduit/setup.md`). Use supplement MCPs only when Conduit lacks the action or fails.
+
+- **Conduit** — hosted MCP for Gmail, Calendar, Drive, Docs, Sheets, Slack, JSM; OAuth per connector; tools prefixed `pd__`; setup in `tool_connections/conduit/setup.md`. List first in `~/.cursor/mcp.json`.
+
+Other MCPs (see `tool_connections/mcp-eda-data-stack.md` for Snowflake/dbt reconciliation):
 - **Atlan** — remote SSO MCP for catalog, lineage, metadata; setup in `tool_connections/atlan/setup.md`
 - **Sigma MCP** — remote OAuth MCP for BI queries; setup in `tool_connections/sigma/setup.md`
 - **Snowflake MCP** — prefer for agent SQL (ED&A stdio MCP + `~/.env.mcp.snowflake`); CLI as supplement — see `tool_connections/mcp-eda-data-stack.md`. Snowflake-managed OAuth MCP still blocked on ED&A platform — `tool_connections/snowflake/mcp.md`
 - **dbt Cloud MCP** — deferred until access is provisioned — see `tool_connections/mcp-eda-data-stack.md`
-- **Jira (BT Jira Cloud)** — self-hosted `mcp-atlassian` via `uvx` (`jira-bt`), API-token auth, for Workday BT Jira Cloud issues; setup in `tool_connections/jira-bt/setup.md`. Replaced an earlier attempt at the official OAuth 2.1 remote MCP, which needs an interactive browser flow this repo's non-interactive sessions can't complete. Confluence on the same site still goes through `confluence-mcp-bt` (Claude Code global config, not this repo).
+- **Jira (BT Jira Cloud)** — supplement MCP: self-hosted `mcp-atlassian` via `uvx` (`jira-bt`) for BT Jira **dev** work (issues, sprints, boards). **JSM / service desk → Conduit first** (`pd__jira_service_desk-*`). Setup: `tool_connections/jira-bt/setup.md`. Confluence on the same site still goes through `confluence-mcp-bt`.
 
 Connections still blocked (no CLI or MCP yet): **Outlook, GitHub.com**.
 
