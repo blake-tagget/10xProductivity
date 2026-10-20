@@ -2,18 +2,24 @@
 tool: conduit
 type: mcp
 status: active
-updated: 2026-09-17
+updated: 2026-10-20
 description: Workday Conduit — default hosted MCP for Google Workspace, Slack, JSM, and other SaaS via Pipedream OAuth.
 ---
 
 # Conduit MCP — default integration layer
 
-Conduit is a **hosted remote MCP** (Workday-internal; URL from the
-[Workday MCP registry](https://ghe.megaleo.com/pages/awesome/mcp/)) that exposes
-approved SaaS connectors (Pipedream-backed) through one server. Use it as the
+Conduit is a **hosted remote MCP** (Workday SSO / VPN) that exposes SaaS
+connectors (Pipedream-backed) through one server. Use it as the
 **default path** for Gmail, Calendar, Drive, Docs, Sheets, Slack, and Jira Service
 Management in Cursor and Claude Code. Reach for dedicated MCPs only when Conduit
 lacks the capability or the call fails.
+
+**Not in [awesome/mcp](https://ghe.megaleo.com/awesome/mcp)** (verified 2026-10-20) —
+do not look for Conduit on the Workday MCP registry. Open the Conduit web UI
+(Workday network), then **Home → Connect a client** to copy the MCP server URL.
+Canonical routing (including the host) lives in RADDS/context-atlas
+`docs/atlas/ROUTING.md` (Conduit-first section). Local machines keep the URL in
+gitignored `verified_connections.md`.
 
 **Why Conduit first:** one OAuth surface, per-user tool trimming, no secrets in
 `mcp.json`, and far fewer tools than enabling every Pipedream action (`allTools`).
@@ -22,7 +28,7 @@ lacks the capability or the call fails.
 
 | Item | State |
 |------|-------|
-| MCP URL | Conduit MCP endpoint from the Workday MCP registry |
+| UI / MCP URL | Conduit web UI → Connect a client (not listed in awesome/mcp) |
 | Auth | Conduit / Pipedream OAuth (per connector); no tokens in config |
 | Tool namespace | `conduit` server → tools prefixed `pd__` (e.g. `pd__slack_v2-post-message`) |
 | Routing rule | `~/code/.cursor/rules/conduit-mcp-default.mdc` (always apply) |
@@ -30,11 +36,12 @@ lacks the capability or the call fails.
 
 ## Cursor setup
 
-List **Conduit first** in `~/.cursor/mcp.json` so it is the primary integration server:
+List **Conduit first** in `~/.cursor/mcp.json` so it is the primary integration server.
+Paste the MCP URL from Conduit **Connect a client** (ends with `/mcp`):
 
 ```json
 "conduit": {
-  "url": "<conduit-mcp-url-from-registry>",
+  "url": "<paste-from-conduit-connect-a-client>",
   "headers": {}
 }
 ```
@@ -142,7 +149,7 @@ Agents in this repo should prefer Conduit over reading `.env` credentials for th
 
 ## References
 
-- Conduit UI and MCP URL: Workday MCP registry → search **Conduit**
+- Conduit UI / MCP URL: Conduit web UI → Connect a client (or `context-atlas` ROUTING.md)
 - BT Jira dev (supplement): `tool_connections/jira-bt/setup.md`
 - ED&A data MCPs (Atlan, Snowflake): `tool_connections/mcp-eda-data-stack.md`
 - Cursor routing rule: `~/code/.cursor/rules/conduit-mcp-default.mdc`
