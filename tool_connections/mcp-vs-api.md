@@ -14,7 +14,7 @@ updated: 2026-04-01
 
 ## What the MCPs are (and aren't)
 
-The Workday internal MCPs (`jira-ghe`, `workday-mcp-bitbucket-server`, `confluence-mcp-bt/pt`) work like this:
+The Workday internal MCPs (Conduit upstream `mcp:jira_ghe`, `workday-mcp-bitbucket-server`, `confluence-mcp-bt/pt`) work like this:
 
 - **Convenience tools** (`getPullRequestDetailsAndFiles`, `get_file_content`, etc.) — pre-built wrappers with opinions baked in. Fast when they work; opaque when they don't.
 - **`executeApi` / `executeApi`-equivalent** — a JavaScript sandbox that injects auth headers and lets you make raw API calls via `ghe()` or `jira()` fetch helpers. This is the direct API approach.
@@ -23,7 +23,7 @@ The Workday internal MCPs (`jira-ghe`, `workday-mcp-bitbucket-server`, `confluen
 
 ## Observed reliability issues with convenience tools
 
-### `getPullRequestComments` (jira-ghe) — fails outside a git repo
+### `getPullRequestComments` (Conduit `mcp:jira_ghe`) — fails outside a git repo
 
 ```
 Failed to get PR comments: spawnSync git ENOENT
@@ -64,7 +64,7 @@ pharos sql run --sql "SELECT * FROM uxresearch.my_table LIMIT 5"
 
 ---
 
-## The direct API pattern for jira-ghe
+## The direct API pattern for Conduit `mcp:jira_ghe`
 
 Always use this two-step pattern in `executeApi`:
 
@@ -96,15 +96,17 @@ return { status: res.status, url: data.html_url };
 
 ---
 
-## 10x tools (Slack, Outlook, Google Drive, Sana) — already direct API
+## 10x tools — deprecated for agent sessions (Conduit first)
 
-The 10x tool connections use direct Python HTTP calls (no MCP protocol overhead). These are already the right approach:
+Google Drive, Slack, Zoom, Gmail → **Conduit MCP** in agent sessions. The 10x Python CLIs are SSO/script fallbacks only (expired sessions are why agents should not prefer them). Miro / Sana remain CLI-only until a Conduit app exists.
+
+Legacy note (scripts outside MCP):
 
 - More reliable — no hidden assumptions
 - Auth is explicit (env vars / playwright session)
 - Full control over request/response
 
-No changes needed for 10x tools — they're already the preferred pattern.
+Do not treat 10x CLIs as the preferred agent pattern for anything Conduit covers.
 
 ---
 
@@ -112,9 +114,10 @@ No changes needed for 10x tools — they're already the preferred pattern.
 
 | Tool | Approach | Reliability |
 |---|---|---|
-| `jira-ghe` convenience tools | avoid for comments/context ops | inconsistent |
-| `jira-ghe` executeApi | use this | reliable with `.json()` pattern |
+| Conduit `mcp:jira_ghe` convenience tools | avoid for comments/context ops | inconsistent |
+| Conduit `mcp:jira_ghe` executeApi | use this | reliable with `.json()` pattern |
 | `workday-mcp-bitbucket-server` file/browse ops | fine | reliable |
 | `pharos-cli` MCP | avoid | hangs frequently |
 | pharos terminal CLI | use this | reliable |
-| 10x Python direct API | use this | reliable |
+| Conduit (`pd__*` / `jira_ghe__*`) | use this for SaaS + jira2/GHE | reliable |
+| 10x Python CLI (Drive/Slack/…) | deprecated for agents | SSO expiry / wrong default |

@@ -12,7 +12,7 @@ Self-hosted MCP server ([sooperset/mcp-atlassian](https://github.com/sooperset/m
 
 Superseded the official Atlassian remote MCP (OAuth 2.1) — that one required an interactive browser sign-in that a non-interactive agent session can't complete, so it never became usable. This server authenticates the same way `confluence-mcp-bt` already does (API token in the MCP config), which works immediately.
 
-Added to reach Jira Cloud issues on the Workday BT site (e.g. `GTMENT-*` tickets), which neither `jira-ghe` (internal Server/DC Jira) nor `confluence-mcp-bt` (Confluence pages only, no Jira issue tools) could reach.
+Added to reach Jira Cloud issues on the Workday BT site (e.g. `GTMENT-*` tickets), which neither Conduit `mcp:jira_ghe` (internal Server/DC Jira + GHE) nor `confluence-mcp-bt` (Confluence pages only, no Jira issue tools) cover. Prefer Conduit `app:jira` first; keep this MCP as supplement.
 
 ## Status
 
@@ -54,13 +54,14 @@ Ask the agent to fetch a known BT ticket by key — a successful `jira_get_issue
 
 | Connection | Site | Scope | Auth |
 |---|---|---|---|
+| **`conduit`** (`app:jira`) | Workday BT Jira Cloud | **Issues / boards / sprints / search — use first** | OAuth via Conduit |
 | **`conduit`** (`jira_service_desk`) | Workday BT Jira Cloud | **JSM / service desk — use first** | OAuth via Conduit |
-| `jira-ghe` | Internal Server/DC Jira + GHE | SWE/EDDG tickets | token headers (Claude global config) |
+| **`conduit`** (`mcp:jira_ghe`) | Internal Server/DC Jira + GHE | SWE/EDDG tickets + GHE API | Conduit upstream OAuth / tokens |
 | `confluence-mcp-bt` | Workday BT Confluence Cloud | Confluence pages/spaces only | API token (Claude global config) |
-| `jira-bt` (this one) | Workday BT Jira Cloud | Jira **dev** issues (sprints, boards, CRUD) | API token, via `uvx mcp-atlassian` |
+| `jira-bt` (this one) | Workday BT Jira Cloud | Supplement when Conduit lacks action / OAuth fails | API token, via `uvx mcp-atlassian` |
 | `ATLASSIAN_BT_*` in `.env` | Workday BT Jira Cloud | Direct REST (curl/scripts) | Same API token — fallback when MCP is down |
 
-**Routing:** Conduit first for JSM requests; this MCP for dev Jira work Conduit does not cover. See `tool_connections/conduit/setup.md`.
+**Routing:** Conduit `pd__jira-*` and `pd__jira_service_desk-*` first; this MCP only as supplement. See `tool_connections/conduit/setup.md`.
 
 If a new API token is ever needed: Atlassian account → Security → API tokens. Update `confluence-mcp-bt`, `jira-bt`, and `ATLASSIAN_BT_TOKEN` together.
 

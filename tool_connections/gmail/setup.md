@@ -5,6 +5,9 @@ auth: app-password
 
 # Gmail Setup
 
+> **Agent sessions:** prefer Conduit (`pd__gmail-*`) — see `tool_connections/conduit/setup.md`.
+> App-password IMAP below is a non-MCP fallback only.
+
 ## What to ask the user
 
 Ask for their Gmail address and a 16-character App Password (not their Google password).
@@ -22,7 +25,7 @@ Also confirm IMAP is enabled:
 
 ```bash
 # --- Gmail ---
-GMAIL_EMAIL=you@gmail.com
+GMAIL_EMAIL=you@example.com
 GMAIL_APP_PASSWORD=xxxxxxxxxxxxxxxxxxxx   # 16-char App Password, spaces optional
 GMAIL_IMAP_HOST=imap.gmail.com
 GMAIL_IMAP_PORT=993
@@ -47,6 +50,6 @@ EOF
 
 Expected output:
 ```
-Auth: ('OK', [b'you@gmail.com authenticated (Success)'])
+Auth: ('OK', [b'you@example.com authenticated (Success)'])
 INBOX emails: <count>
 ```

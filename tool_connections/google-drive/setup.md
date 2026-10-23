@@ -5,6 +5,10 @@ description: Set up Google Drive connection. Hybrid approach — Google Drive fo
 
 # Google Drive — Setup
 
+> **Agent sessions:** prefer Conduit (`pd__gdrive-*`, plus Docs/Sheets/Gmail/Calendar) —
+> see `tool_connections/conduit/setup.md`. Keep this path for Drive-for-Desktop mounts,
+> Playwright content reads, and scripts outside MCP.
+
 ## Auth approach: local filesystem (primary) + Playwright session (for content)
 
 **No OAuth2 app, no GCP project, no admin approval needed.**

@@ -14,6 +14,10 @@ storage_state: ~/.browser_automation/zoom_docs_auth.json
 
 # Zoom — SSO session
 
+> **Agent sessions:** prefer Conduit (`pd__zoom-*`) — see `tool_connections/conduit/setup.md`.
+> Keep this SSO path for Workday enterprise cookies, NAK refresh, and `docs.zoom.us`
+> AI meeting-summary text when Conduit does not cover it.
+
 Enterprise Zoom at `workday.zoom.us`. Three-layer auth:
 
 | Layer | What | TTL | Used for |

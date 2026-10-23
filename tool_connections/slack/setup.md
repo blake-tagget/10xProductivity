@@ -5,6 +5,9 @@ description: Set up Slack connection. Auth is SSO browser session — no API tok
 
 # Slack — Setup
 
+> **Agent sessions:** prefer Conduit (`pd__slack_v2-*`) — see `tool_connections/conduit/setup.md`.
+> This SSO CLI path is for scripts, enterprise-search, and environments without Conduit.
+
 ## Auth method: SSO browser session
 
 Slack uses a short-lived client token (`xoxc`) + cookie (`d`) captured from your browser session after SSO. No API token page exists. No admin approval needed.
